@@ -1,0 +1,7 @@
+pandas
+pyarrow
+lightgbm
+optuna
+scikit-learn
+tensorflow
+duckdb
