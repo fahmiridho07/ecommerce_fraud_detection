@@ -5,7 +5,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-KAGGLE_DATA_DIR = Path("/kaggle/input/ieee-fraud-detection")
+KAGGLE_DATA_DIR = Path("/kaggle/input/competitions/ieee-fraud-detection")
 LOCAL_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 DATA_DIR = KAGGLE_DATA_DIR if KAGGLE_DATA_DIR.exists() else LOCAL_DATA_DIR
 
