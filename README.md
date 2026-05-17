@@ -1,84 +1,105 @@
-# E-commerce Fraud Detection Thesis
+<div align="center">
 
-This repository contains the implementation for an undergraduate thesis:
+# E-commerce Fraud Detection
 
-**E-commerce transaction fraud detection using Autoencoder and LightGBM with Bayesian Optimization.**
+**Undergraduate thesis project on detecting fraudulent e-commerce transactions using the IEEE-CIS Fraud Detection dataset.**
 
-The project uses the IEEE-CIS Fraud Detection dataset from Kaggle. The final experiment design uses a chronological split because `TransactionDT` is a relative timedelta and the dataset has temporal structure.
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![LightGBM](https://img.shields.io/badge/LightGBM-Baseline-9ACD32?style=flat-square)
+![Autoencoder](https://img.shields.io/badge/Robust%20AE-V--features-FFB000?style=flat-square)
+![Metric](https://img.shields.io/badge/Primary%20Metric-PR--AUC-FF6B6B?style=flat-square)
+![Status](https://img.shields.io/badge/Status-In%20Progress-7C3AED?style=flat-square)
 
-## Dataset
+</div>
 
-For local execution, download the Kaggle IEEE-CIS Fraud Detection files and place them in:
+## Overview
 
-```text
-data/raw/
-  train_transaction.csv
-  train_identity.csv
-  test_transaction.csv
-  test_identity.csv
-```
+This repository contains an undergraduate thesis implementation for e-commerce fraud detection. The project compares a LightGBM baseline with an Autoencoder-enhanced LightGBM pipeline, using a temporal evaluation setup based on `TransactionDT` so the experiment better reflects real-world fraud detection over time.
 
-Only `train_transaction.csv` and `train_identity.csv` are used for thesis metric evaluation because they contain `isFraud`. Kaggle competition test files do not contain labels, so they are not used for PR-AUC, ROC-AUC, Precision, Recall, F1, or MCC evaluation.
+## Highlights
 
-On Kaggle, attach the IEEE-CIS Fraud Detection dataset to the notebook. The code automatically uses `/kaggle/input/ieee-fraud-detection` when that directory exists; otherwise it uses local `data/raw`.
-
-Kaggle notebooks can run project scripts with commands such as:
-
-```bash
-!python src/train_baseline_lgbm.py
-```
+- **Temporal split:** labeled train data is sorted by `TransactionDT` and split chronologically into train, validation, and test sets.
+- **Main models:** LightGBM baseline, Robust Autoencoder for `V`-features, and AE-LightGBM.
+- **Tuning:** Optuna is used for hyperparameter search, with final tuning still in progress.
+- **Primary metric:** PR-AUC / Average Precision, chosen because fraud detection is highly imbalanced.
+- **Leakage-aware evaluation:** preprocessing, representation learning, threshold selection, and tuning are fitted only on the allowed split for each phase.
 
 ## Project Structure
 
 ```text
-src/
-  config.py
-  utils.py
-  data_loader.py
-  splitting.py
-  preprocessing.py
-  evaluation.py
-  train_baseline_lgbm.py
-  train_autoencoder.py
-  train_ae_lgbm.py
-  tune_lgbm_optuna.py
-  compare_results.py
-
-outputs/
-  baseline_lgbm/
-  autoencoder/
-  ae_lgbm/
-  optuna/
-  final_comparison/
-
-data/
-  raw/
-
-notebooks/
-  kaggle_runner.ipynb
-  eda.ipynb
+.
+|-- data/
+|   `-- raw/                    # Local Kaggle dataset files
+|-- notebooks/
+|   |-- eda.ipynb
+|   |-- kaggle_runner.ipynb
+|   `-- ta-fraud-detection.ipynb
+|-- outputs/                    # Generated experiment artifacts
+|-- src/
+|   |-- check_data_split.py
+|   |-- train_baseline_lgbm.py
+|   |-- train_autoencoder_robust.py
+|   |-- train_ae_lgbm.py
+|   |-- tune_lgbm_optuna.py
+|   `-- compare_results.py
+|-- requirements.txt
+`-- README.md
 ```
 
-## Planned Phases
+## Run Locally
 
-Phase 0 creates the project foundation and configuration. No model training is performed.
+1. Install dependencies.
 
-Planned commands for later phases:
+```bash
+pip install -r requirements.txt
+```
+
+2. Download the IEEE-CIS Fraud Detection files from Kaggle and place them in:
+
+```text
+data/raw/
+|-- train_transaction.csv
+|-- train_identity.csv
+|-- test_transaction.csv
+`-- test_identity.csv
+```
+
+3. Run the main pipeline scripts.
 
 ```bash
 python src/check_data_split.py
 python src/train_baseline_lgbm.py
-python src/train_autoencoder.py
+python src/train_autoencoder_robust.py
 python src/train_ae_lgbm.py
-python src/tune_lgbm_optuna.py
-python src/compare_results.py
 ```
 
-## Experiment Notes
+4. Optional Optuna tuning.
 
-- Sort by `TransactionDT` before splitting.
-- Split chronologically: first 60% train, next 20% validation, final 20% test.
-- Use PR-AUC / Average Precision as the primary metric.
-- Use ROC-AUC, Precision, Recall, F1, and MCC as supporting metrics.
-- Avoid data leakage: fit preprocessing, scalers, encoders, Autoencoder, thresholds, and hyperparameters only on allowed training or validation data according to the phase design.
-- Treat V-features (`V1` to `V339`) as numerical Vesta-engineered features, not categorical features.
+```bash
+python src/tune_lgbm_optuna.py --model_type baseline_lgbm --tuning_profile quick
+python src/tune_lgbm_optuna.py --model_type ae_lgbm_ld128 --tuning_profile quick
+```
+
+## Kaggle Execution
+
+For Kaggle runs, attach the **IEEE-CIS Fraud Detection** dataset to the notebook. The project automatically uses `/kaggle/input/ieee-fraud-detection` when that path exists; otherwise it falls back to local `data/raw/`.
+
+```bash
+!python src/train_baseline_lgbm.py
+!python src/train_autoencoder_robust.py
+!python src/train_ae_lgbm.py
+```
+
+Kaggle competition test files are **not used for metric evaluation** because they do not contain `isFraud` labels. The main reported evaluation uses the temporal train/validation/test split from the labeled Kaggle train files.
+
+## Current Status
+
+- LightGBM baseline pipeline: ready
+- Robust Autoencoder representation learning: ready
+- AE-LightGBM pipeline: ready
+- Optuna final tuning: running
+- Final comparison summary: pending after tuning finishes
+
+## Author
+
+Created and maintained by the repository owner as part of an undergraduate thesis project.
