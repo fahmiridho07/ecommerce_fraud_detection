@@ -1,27 +1,151 @@
+# =========================================================
 # Data
-data/
-*.parquet
-*.csv
+# =========================================================
+data/raw/*
+!data/raw/.gitkeep
 
+data/processed/*
+!data/processed/.gitkeep
+
+data/interim/*
+!data/interim/.gitkeep
+
+# Dataset / large tabular files
+*.csv
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.xlsx
+*.xls
+*.jsonl
+
+
+# =========================================================
+# Experiment Outputs
+# =========================================================
+outputs/*
+!outputs/.gitkeep
+
+logs/*
+!logs/.gitkeep
+
+runs/*
+!runs/.gitkeep
+
+reports/generated/*
+!reports/generated/.gitkeep
+
+
+# =========================================================
+# Model Artifacts
+# =========================================================
+*.pkl
+*.pickle
+*.joblib
+*.model
+*.txt.model
+*.lgb
+*.bst
+
+# TensorFlow / Keras
+*.keras
+*.h5
+*.pb
+saved_model/
+checkpoints/
+*.ckpt*
+*.weights.h5
+
+# PyTorch, just in case
+*.pt
+*.pth
+*.onnx
+
+
+# =========================================================
+# Numpy / Intermediate Arrays
+# =========================================================
+*.npy
+*.npz
+
+
+# =========================================================
+# Optuna / SQLite / Databases
+# =========================================================
+*.db
+*.sqlite
+*.sqlite3
+study.db
+
+
+# =========================================================
 # Environments & Secrets
+# =========================================================
 .env
-.venv
+.env.*
+!.env.example
+
+.venv/
 env/
 venv/
 ENV/
-secret.py
 
+secret.py
+secrets.py
+credentials.json
+token.json
+kaggle.json
+
+
+# =========================================================
 # Python
+# =========================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+
+# =========================================================
 # Jupyter
+# =========================================================
 .ipynb_checkpoints/
 
+# Optional: uncomment if you don't want notebooks committed
+# *.ipynb
+
+
+# =========================================================
+# IDE / Editor
+# =========================================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+.idea/
+
+
+# =========================================================
+# Testing / Coverage / Cache
+# =========================================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+
+# =========================================================
 # OS generated files
+# =========================================================
 .DS_Store
 .DS_Store?
 ._*

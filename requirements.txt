@@ -1,7 +1,9 @@
 pandas
-pyarrow
+numpy
+scikit-learn
 lightgbm
 optuna
-scikit-learn
 tensorflow
-duckdb
+joblib
+matplotlib
+
