@@ -3,6 +3,7 @@
 This script tunes only:
 - baseline_lgbm
 - ae_lgbm_ld128
+- ae_augmented_lgbm_ld128
 
 Leakage prevention is intentionally strict:
 - train split: preprocessing fit and LightGBM fitting
@@ -39,6 +40,7 @@ except ImportError as exc:  # pragma: no cover - environment dependent
     ) from exc
 
 from config import (
+    AE_AUGMENTED_LGBM_LD128_OUTPUT_DIR,
     AE_LGBM_LD128_OUTPUT_DIR,
     AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
     BASELINE_OUTPUT_DIR,
@@ -68,6 +70,12 @@ from preprocessing import (
     split_features_target,
 )
 from splitting import chronological_split
+from train_ae_augmented_lgbm import (
+    RECONSTRUCTION_ERROR_FEATURE,
+    combine_original_latent_and_error,
+    load_or_compute_reconstruction_errors,
+    validate_augmented_feature_alignment,
+)
 from train_ae_lgbm import (
     apply_non_v_preprocessing,
     combine_non_v_and_latent,
@@ -90,7 +98,11 @@ EARLY_STOPPING_ROUNDS = 100
 EXPECTED_LD128_LATENT_DIM = 128
 DEFAULT_N_JOBS = 4
 
-SUPPORTED_MODEL_TYPES = ("baseline_lgbm", "ae_lgbm_ld128")
+SUPPORTED_MODEL_TYPES = (
+    "baseline_lgbm",
+    "ae_lgbm_ld128",
+    "ae_augmented_lgbm_ld128",
+)
 SUPPORTED_TUNING_PROFILES = ("quick", "final")
 
 TUNING_PROFILES = {
@@ -128,6 +140,7 @@ TUNING_PROFILES = {
 TUNED_OUTPUT_DIRS = {
     "baseline_lgbm": OPTUNA_OUTPUT_DIR / "baseline_lgbm",
     "ae_lgbm_ld128": OPTUNA_OUTPUT_DIR / "ae_lgbm_ld128",
+    "ae_augmented_lgbm_ld128": OPTUNA_OUTPUT_DIR / "ae_augmented_lgbm_ld128",
 }
 
 COMPARISON_FILE = FINAL_COMPARISON_OUTPUT_DIR / "optuna_comparison.csv"
@@ -191,9 +204,9 @@ def load_json(path: Path) -> dict[str, object]:
 def output_complete(output_dir: Path, model_type: str) -> bool:
     required_files = list(REQUIRED_OUTPUT_FILES)
     preprocessing_file = (
-        "preprocessing.pkl"
-        if model_type == "baseline_lgbm"
-        else "preprocessing_non_v.pkl"
+        "preprocessing_non_v.pkl"
+        if model_type == "ae_lgbm_ld128"
+        else "preprocessing.pkl"
     )
     required_files.append(preprocessing_file)
     if not all((output_dir / file_name).exists() for file_name in required_files):
@@ -330,11 +343,128 @@ def prepare_ae_lgbm_ld128_data() -> PreparedData:
     )
 
 
+def prepare_ae_augmented_lgbm_ld128_data() -> PreparedData:
+    """Build AE-augmented LD128 matrices with original V-features retained."""
+    log("Loading labeled training data.")
+    full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
+
+    log("Creating chronological train/validation/test split.")
+    train_df, valid_df, test_df = chronological_split(full_df)
+    v_columns = get_v_feature_columns(train_df)
+
+    log("Building original baseline feature matrices.")
+    X_train_raw, y_train = split_features_target(train_df)
+    X_valid_raw, y_valid = split_features_target(valid_df)
+    X_test_raw, y_test = split_features_target(test_df)
+
+    # Leakage prevention: baseline categorical mappings are fit only on train.
+    # Numeric NaNs, including original V-feature NaNs, stay available to LightGBM.
+    preprocessing = fit_baseline_preprocessing(X_train_raw)
+    X_train_original = apply_baseline_preprocessing(X_train_raw, preprocessing)
+    X_valid_original = apply_baseline_preprocessing(X_valid_raw, preprocessing)
+    X_test_original = apply_baseline_preprocessing(X_test_raw, preprocessing)
+
+    log("Loading robust Autoencoder latent_dim=128 features.")
+    (
+        latent_train,
+        latent_valid,
+        latent_test,
+        latent_feature_names,
+        robust_ae_run_config,
+    ) = load_robust_latent_outputs(AUTOENCODER_ROBUST_LD128_OUTPUT_DIR)
+
+    validate_latent_outputs(
+        latent_train,
+        latent_valid,
+        latent_test,
+        latent_feature_names,
+        len(train_df),
+        len(valid_df),
+        len(test_df),
+    )
+    if latent_train.shape[1] != EXPECTED_LD128_LATENT_DIM:
+        raise ValueError(
+            "Expected latent_dim=128 for ae_augmented_lgbm_ld128, but found "
+            f"{latent_train.shape[1]} columns."
+        )
+
+    log("Loading or computing robust Autoencoder reconstruction errors.")
+    reconstruction_errors, reconstruction_error_source = load_or_compute_reconstruction_errors(
+        AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
+        robust_ae_run_config,
+        train_df,
+        valid_df,
+        test_df,
+    )
+
+    log("Combining original features with robust AE latent features and error.")
+    # AE-Augmented is an augmentation experiment: original V1-V339 features
+    # are retained, while LD128 latent features and reconstruction MSE are added.
+    X_train = combine_original_latent_and_error(
+        X_train_original,
+        latent_train,
+        latent_feature_names,
+        reconstruction_errors["train"],
+    )
+    X_valid = combine_original_latent_and_error(
+        X_valid_original,
+        latent_valid,
+        latent_feature_names,
+        reconstruction_errors["validation"],
+    )
+    X_test = combine_original_latent_and_error(
+        X_test_original,
+        latent_test,
+        latent_feature_names,
+        reconstruction_errors["test"],
+    )
+    validate_augmented_feature_alignment(X_train, X_valid, X_test, v_columns)
+
+    robust_preprocessing = robust_ae_run_config.get("preprocessing", {})
+    feature_info = {
+        "feature_setup": "AE-Augmented LightGBM latent_dim=128.",
+        "experiment_type": "augmentation_not_replacement",
+        "original_features_retained": True,
+        "original_v_features_retained": True,
+        "original_feature_count": int(X_train_original.shape[1]),
+        "original_v_feature_count": len(v_columns),
+        "ae_latent_feature_count": len(latent_feature_names),
+        "reconstruction_error_included": True,
+        "reconstruction_error_feature": RECONSTRUCTION_ERROR_FEATURE,
+        "reconstruction_error_source": reconstruction_error_source,
+        "total_feature_count": int(X_train.shape[1]),
+        "robust_autoencoder_output_dir": str(AUTOENCODER_ROBUST_LD128_OUTPUT_DIR),
+        "robust_autoencoder_clipping": {
+            "enabled": robust_preprocessing.get("scaled_clipping_enabled"),
+            "clip_min": robust_preprocessing.get("clip_min"),
+            "clip_max": robust_preprocessing.get("clip_max"),
+        },
+        "categorical_columns": preprocessing["categorical_columns"],
+        "categorical_columns_count": len(preprocessing["categorical_columns"]),
+        "numeric_missing_values": "Preserved as NaN for LightGBM native handling.",
+    }
+
+    return PreparedData(
+        X_train=X_train,
+        X_valid=X_valid,
+        X_test=X_test,
+        y_train=y_train,
+        y_valid=y_valid,
+        y_test=y_test,
+        categorical_columns=preprocessing["categorical_columns"],
+        preprocessing=preprocessing,
+        preprocessing_filename="preprocessing.pkl",
+        feature_info=feature_info,
+    )
+
+
 def prepare_data(model_type: str) -> PreparedData:
     if model_type == "baseline_lgbm":
         return prepare_baseline_data()
     if model_type == "ae_lgbm_ld128":
         return prepare_ae_lgbm_ld128_data()
+    if model_type == "ae_augmented_lgbm_ld128":
+        return prepare_ae_augmented_lgbm_ld128_data()
     raise ValueError(f"Unsupported model_type: {model_type}")
 
 
@@ -726,73 +856,77 @@ def comparison_row(
     tuned: bool,
     metrics_path: Path,
     run_config_path: Path,
-) -> dict[str, object]:
-    row = {
-        "model_name": model_name,
-        "tuned": tuned,
-        "test_pr_auc": None,
-        "test_roc_auc": None,
-        "test_precision": None,
-        "test_recall": None,
-        "test_f1": None,
-        "test_mcc": None,
-        "selected_threshold": None,
-        "best_iteration": None,
-        "n_trials": None if tuned else 0,
-        "total_features": None,
-    }
+) -> dict[str, object] | None:
     if not metrics_path.exists() or not run_config_path.exists():
-        return row
+        return None
 
     run_config = load_json(run_config_path)
     if tuned and run_config.get("final_training_completed") is False:
-        return row
+        return None
 
     metrics = load_json(metrics_path)
-    row.update(
-        {
-            "test_pr_auc": metric_value(metrics, "average_precision"),
-            "test_roc_auc": metric_value(metrics, "roc_auc"),
-            "test_precision": metric_value(metrics, "precision"),
-            "test_recall": metric_value(metrics, "recall"),
-            "test_f1": metric_value(metrics, "f1"),
-            "test_mcc": metric_value(metrics, "mcc"),
-            "selected_threshold": metric_value(metrics, "threshold"),
-            "best_iteration": run_config.get("early_stopping", {}).get("best_iteration"),
-            "n_trials": n_trials_from_run_config(run_config, tuned),
-            "total_features": total_features_from_run_config(run_config),
-        }
-    )
-    return row
+    return {
+        "model_name": model_name,
+        "tuned": tuned,
+        "test_pr_auc": metric_value(metrics, "average_precision"),
+        "test_roc_auc": metric_value(metrics, "roc_auc"),
+        "test_precision": metric_value(metrics, "precision"),
+        "test_recall": metric_value(metrics, "recall"),
+        "test_f1": metric_value(metrics, "f1"),
+        "test_mcc": metric_value(metrics, "mcc"),
+        "selected_threshold": metric_value(metrics, "threshold"),
+        "best_iteration": run_config.get("early_stopping", {}).get("best_iteration"),
+        "n_trials": n_trials_from_run_config(run_config, tuned),
+        "total_features": total_features_from_run_config(run_config),
+    }
 
 
 def build_optuna_comparison_table() -> pd.DataFrame:
-    rows = [
-        comparison_row(
+    candidates = [
+        (
             "baseline_lgbm_default",
             False,
             BASELINE_OUTPUT_DIR / "metrics_test_selected_threshold.json",
             BASELINE_OUTPUT_DIR / "run_config.json",
         ),
-        comparison_row(
-            "ae_lgbm_ld128_default",
-            False,
-            AE_LGBM_LD128_OUTPUT_DIR / "metrics_test_selected_threshold.json",
-            AE_LGBM_LD128_OUTPUT_DIR / "run_config.json",
-        ),
-        comparison_row(
+        (
             "baseline_lgbm_tuned",
             True,
             TUNED_OUTPUT_DIRS["baseline_lgbm"] / "metrics_test_selected_threshold.json",
             TUNED_OUTPUT_DIRS["baseline_lgbm"] / "run_config.json",
         ),
-        comparison_row(
+        (
+            "ae_lgbm_ld128_default",
+            False,
+            AE_LGBM_LD128_OUTPUT_DIR / "metrics_test_selected_threshold.json",
+            AE_LGBM_LD128_OUTPUT_DIR / "run_config.json",
+        ),
+        (
             "ae_lgbm_ld128_tuned",
             True,
             TUNED_OUTPUT_DIRS["ae_lgbm_ld128"] / "metrics_test_selected_threshold.json",
             TUNED_OUTPUT_DIRS["ae_lgbm_ld128"] / "run_config.json",
         ),
+        (
+            "ae_augmented_lgbm_ld128_default",
+            False,
+            AE_AUGMENTED_LGBM_LD128_OUTPUT_DIR
+            / "metrics_test_selected_threshold.json",
+            AE_AUGMENTED_LGBM_LD128_OUTPUT_DIR / "run_config.json",
+        ),
+        (
+            "ae_augmented_lgbm_ld128_tuned",
+            True,
+            TUNED_OUTPUT_DIRS["ae_augmented_lgbm_ld128"]
+            / "metrics_test_selected_threshold.json",
+            TUNED_OUTPUT_DIRS["ae_augmented_lgbm_ld128"] / "run_config.json",
+        ),
     ]
+    rows: list[dict[str, object]] = []
+    for model_name, tuned, metrics_path, run_config_path in candidates:
+        row = comparison_row(model_name, tuned, metrics_path, run_config_path)
+        if row is not None:
+            rows.append(row)
     return pd.DataFrame(rows, columns=COMPARISON_COLUMNS)
 
 
@@ -865,6 +999,11 @@ def print_deltas(table: pd.DataFrame) -> None:
     pairs = [
         ("baseline_lgbm", "baseline_lgbm_default", "baseline_lgbm_tuned"),
         ("ae_lgbm_ld128", "ae_lgbm_ld128_default", "ae_lgbm_ld128_tuned"),
+        (
+            "ae_augmented_lgbm_ld128",
+            "ae_augmented_lgbm_ld128_default",
+            "ae_augmented_lgbm_ld128_tuned",
+        ),
     ]
     for label, default_name, tuned_name in pairs:
         default_row = _row_by_name(table, default_name)
@@ -1002,13 +1141,19 @@ def run_tuning(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Phase 5 Optuna/TPE tuning for baseline_lgbm and ae_lgbm_ld128."
+        description=(
+            "Phase 5 Optuna/TPE tuning for baseline_lgbm, ae_lgbm_ld128, "
+            "and ae_augmented_lgbm_ld128."
+        )
     )
     parser.add_argument(
         "--model_type",
         required=True,
         choices=SUPPORTED_MODEL_TYPES,
-        help="Model to tune. Only baseline_lgbm and ae_lgbm_ld128 are supported.",
+        help=(
+            "Model to tune: baseline_lgbm, ae_lgbm_ld128, "
+            "or ae_augmented_lgbm_ld128."
+        ),
     )
     parser.add_argument(
         "--n_trials",
