@@ -2,6 +2,7 @@
 
 This script tunes only:
 - baseline_lgbm
+- baseline_lgbm_entity_time_amount_features
 - ae_lgbm_ld128
 - ae_augmented_lgbm_ld128
 
@@ -45,6 +46,7 @@ from config import (
     AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
     BASELINE_OUTPUT_DIR,
     DATA_DIR,
+    FEATURE_ENGINEERED_LGBM_OUTPUT_DIR,
     FINAL_COMPARISON_OUTPUT_DIR,
     ID_COL,
     OPTUNA_OUTPUT_DIR,
@@ -62,6 +64,13 @@ from evaluation import (
     confusion_matrix_table,
     selected_threshold_from_table,
     threshold_selection_table,
+)
+from feature_engineering import (
+    apply_entity_time_amount_features,
+    feature_engineering_summary,
+    fit_entity_time_amount_features,
+    unknown_rate_summary,
+    validate_engineered_features,
 )
 from preprocessing import (
     apply_baseline_preprocessing,
@@ -97,9 +106,11 @@ DEFAULT_THRESHOLD = 0.5
 EARLY_STOPPING_ROUNDS = 100
 EXPECTED_LD128_LATENT_DIM = 128
 DEFAULT_N_JOBS = 4
+FEATURE_ENGINEERED_MODEL_TYPE = "baseline_lgbm_entity_time_amount_features"
 
 SUPPORTED_MODEL_TYPES = (
     "baseline_lgbm",
+    FEATURE_ENGINEERED_MODEL_TYPE,
     "ae_lgbm_ld128",
     "ae_augmented_lgbm_ld128",
 )
@@ -139,6 +150,9 @@ TUNING_PROFILES = {
 
 TUNED_OUTPUT_DIRS = {
     "baseline_lgbm": OPTUNA_OUTPUT_DIR / "baseline_lgbm",
+    FEATURE_ENGINEERED_MODEL_TYPE: (
+        OPTUNA_OUTPUT_DIR / "baseline_lgbm_entity_time_amount_features"
+    ),
     "ae_lgbm_ld128": OPTUNA_OUTPUT_DIR / "ae_lgbm_ld128",
     "ae_augmented_lgbm_ld128": OPTUNA_OUTPUT_DIR / "ae_augmented_lgbm_ld128",
 }
@@ -190,6 +204,7 @@ class PreparedData:
     preprocessing: dict[str, object]
     preprocessing_filename: str
     feature_info: dict[str, object]
+    extra_artifacts: dict[str, object] | None = None
 
     @property
     def total_features(self) -> int:
@@ -209,6 +224,8 @@ def output_complete(output_dir: Path, model_type: str) -> bool:
         else "preprocessing.pkl"
     )
     required_files.append(preprocessing_file)
+    if model_type == FEATURE_ENGINEERED_MODEL_TYPE:
+        required_files.append("feature_engineering.pkl")
     if not all((output_dir / file_name).exists() for file_name in required_files):
         return False
 
@@ -256,6 +273,137 @@ def prepare_baseline_data() -> PreparedData:
         preprocessing=preprocessing,
         preprocessing_filename="preprocessing.pkl",
         feature_info=feature_info,
+    )
+
+
+def validate_feature_engineered_final_alignment(
+    X_train: pd.DataFrame,
+    X_valid: pd.DataFrame,
+    X_test: pd.DataFrame,
+    engineered_features: list[str],
+) -> None:
+    """Validate final model matrices for the feature-engineered branch."""
+    if X_valid.columns.tolist() != X_train.columns.tolist():
+        raise ValueError(
+            "Feature-engineered validation columns do not align with train."
+        )
+    if X_test.columns.tolist() != X_train.columns.tolist():
+        raise ValueError("Feature-engineered test columns do not align with train.")
+
+    missing_engineered = [
+        feature for feature in engineered_features if feature not in X_train.columns
+    ]
+    if missing_engineered:
+        raise ValueError(
+            "Feature-engineered model matrix is missing engineered feature(s): "
+            + ", ".join(missing_engineered[:20])
+        )
+
+    retained_internal_keys = [
+        column
+        for column in X_train.columns
+        if str(column).startswith("__fe_key_") or str(column).startswith("uid_")
+    ]
+    if retained_internal_keys:
+        raise ValueError(
+            "Internal UID/combo key columns leaked into feature-engineered model: "
+            + ", ".join(retained_internal_keys)
+        )
+
+
+def prepare_feature_engineered_lgbm_data() -> PreparedData:
+    """Build leakage-safe entity/time/amount feature-engineered matrices."""
+    log("Loading labeled training data.")
+    full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
+
+    log("Creating chronological train/validation/test split.")
+    train_df, valid_df, test_df = chronological_split(full_df)
+
+    log("Separating target before feature engineering.")
+    X_train_raw, y_train = split_features_target(train_df)
+    X_valid_raw, y_valid = split_features_target(valid_df)
+    X_test_raw, y_test = split_features_target(test_df)
+
+    log("Fitting entity/time/amount feature artifacts on train only.")
+    feature_artifacts = fit_entity_time_amount_features(X_train_raw)
+
+    log("Applying train-fitted feature artifacts to all splits.")
+    X_train_engineered = apply_entity_time_amount_features(
+        X_train_raw,
+        feature_artifacts,
+    )
+    X_valid_engineered = apply_entity_time_amount_features(
+        X_valid_raw,
+        feature_artifacts,
+    )
+    X_test_engineered = apply_entity_time_amount_features(
+        X_test_raw,
+        feature_artifacts,
+    )
+    validate_engineered_features(
+        X_train_engineered,
+        X_valid_engineered,
+        X_test_engineered,
+        feature_artifacts,
+    )
+
+    log("Computing unknown-rate summaries against train-fitted mappings.")
+    unknown_rates = {
+        "train": unknown_rate_summary(X_train_raw, feature_artifacts),
+        "validation": unknown_rate_summary(X_valid_raw, feature_artifacts),
+        "test": unknown_rate_summary(X_test_raw, feature_artifacts),
+    }
+
+    log("Fitting train-only categorical preprocessing on engineered features.")
+    preprocessing = fit_baseline_preprocessing(X_train_engineered)
+    X_train = apply_baseline_preprocessing(X_train_engineered, preprocessing)
+    X_valid = apply_baseline_preprocessing(X_valid_engineered, preprocessing)
+    X_test = apply_baseline_preprocessing(X_test_engineered, preprocessing)
+    validate_feature_engineered_final_alignment(
+        X_train,
+        X_valid,
+        X_test,
+        feature_artifacts["engineered_feature_names"],
+    )
+
+    feature_summary = feature_engineering_summary(feature_artifacts)
+    feature_info = {
+        "feature_setup": "Leakage-safe entity/time/amount LightGBM features.",
+        "experiment_type": FEATURE_ENGINEERED_MODEL_TYPE,
+        "original_features_retained": True,
+        "original_feature_count": int(X_train_raw.shape[1]),
+        "engineered_feature_count": feature_summary["engineered_feature_count"],
+        "total_feature_count": int(X_train.shape[1]),
+        "engineered_features": feature_summary["engineered_feature_names"],
+        "feature_engineering": feature_summary,
+        "unknown_rate_summary": unknown_rates,
+        "leakage_prevention": {
+            "feature_engineering_fit": (
+                "Count, frequency, and amount-stat mappings are fit on train only."
+            ),
+            "feature_engineering_apply": (
+                "Validation/test are transformed only with train-fitted mappings."
+            ),
+            "target_encoding_used": False,
+            "fraud_labels_used_for_features": False,
+        },
+        "categorical_columns": preprocessing["categorical_columns"],
+        "categorical_columns_count": len(preprocessing["categorical_columns"]),
+        "numeric_missing_values": "Preserved as NaN for LightGBM native handling.",
+    }
+
+    return PreparedData(
+        X_train=X_train,
+        X_valid=X_valid,
+        X_test=X_test,
+        y_train=y_train,
+        y_valid=y_valid,
+        y_test=y_test,
+        categorical_columns=preprocessing["categorical_columns"],
+        preprocessing=preprocessing,
+        preprocessing_filename="preprocessing.pkl",
+        feature_info=feature_info,
+        extra_artifacts={"feature_engineering.pkl": feature_artifacts},
     )
 
 
@@ -461,6 +609,8 @@ def prepare_ae_augmented_lgbm_ld128_data() -> PreparedData:
 def prepare_data(model_type: str) -> PreparedData:
     if model_type == "baseline_lgbm":
         return prepare_baseline_data()
+    if model_type == FEATURE_ENGINEERED_MODEL_TYPE:
+        return prepare_feature_engineered_lgbm_data()
     if model_type == "ae_lgbm_ld128":
         return prepare_ae_lgbm_ld128_data()
     if model_type == "ae_augmented_lgbm_ld128":
@@ -700,6 +850,9 @@ def train_final_model(
     joblib.dump(model, output_dir / "final_model.pkl")
     model.booster_.save_model(str(output_dir / "final_model.txt"))
     joblib.dump(prepared.preprocessing, output_dir / prepared.preprocessing_filename)
+    if prepared.extra_artifacts:
+        for filename, artifact in prepared.extra_artifacts.items():
+            joblib.dump(artifact, output_dir / filename)
 
     return {
         "model": model,
@@ -710,6 +863,21 @@ def train_final_model(
         "metrics_test_default": metrics_test_default,
         "metrics_test_selected": metrics_test_selected,
     }
+
+
+def leakage_prevention_summary(model_type: str) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "train": "Preprocessing fit and LightGBM model fitting.",
+        "validation": "Early stopping, Optuna objective, and threshold selection.",
+        "test": "Final evaluation only after best hyperparameters and threshold are selected.",
+        "kaggle_competition_test_files_used": False,
+    }
+    if model_type == FEATURE_ENGINEERED_MODEL_TYPE:
+        summary["feature_engineering"] = (
+            "Entity/time/amount mappings are fit on train only and applied to "
+            "validation/test."
+        )
+    return summary
 
 
 def build_run_config(
@@ -747,12 +915,7 @@ def build_run_config(
             "validation": VALID_RATIO,
             "test": TEST_RATIO,
         },
-        "leakage_prevention": {
-            "train": "Preprocessing fit and LightGBM model fitting.",
-            "validation": "Early stopping, Optuna objective, and threshold selection.",
-            "test": "Final evaluation only after best hyperparameters and threshold are selected.",
-            "kaggle_competition_test_files_used": False,
-        },
+        "leakage_prevention": leakage_prevention_summary(args.model_type),
         "feature_construction": prepared.feature_info,
         "model_features_count": prepared.total_features,
         "preprocessing_file": prepared.preprocessing_filename,
@@ -896,6 +1059,20 @@ def build_optuna_comparison_table() -> pd.DataFrame:
             TUNED_OUTPUT_DIRS["baseline_lgbm"] / "run_config.json",
         ),
         (
+            "baseline_lgbm_entity_time_amount_features_default",
+            False,
+            FEATURE_ENGINEERED_LGBM_OUTPUT_DIR
+            / "metrics_test_selected_threshold.json",
+            FEATURE_ENGINEERED_LGBM_OUTPUT_DIR / "run_config.json",
+        ),
+        (
+            "baseline_lgbm_entity_time_amount_features_tuned",
+            True,
+            TUNED_OUTPUT_DIRS[FEATURE_ENGINEERED_MODEL_TYPE]
+            / "metrics_test_selected_threshold.json",
+            TUNED_OUTPUT_DIRS[FEATURE_ENGINEERED_MODEL_TYPE] / "run_config.json",
+        ),
+        (
             "ae_lgbm_ld128_default",
             False,
             AE_LGBM_LD128_OUTPUT_DIR / "metrics_test_selected_threshold.json",
@@ -998,6 +1175,11 @@ def print_deltas(table: pd.DataFrame) -> None:
     print("======================")
     pairs = [
         ("baseline_lgbm", "baseline_lgbm_default", "baseline_lgbm_tuned"),
+        (
+            "baseline_lgbm_entity_time_amount_features",
+            "baseline_lgbm_entity_time_amount_features_default",
+            "baseline_lgbm_entity_time_amount_features_tuned",
+        ),
         ("ae_lgbm_ld128", "ae_lgbm_ld128_default", "ae_lgbm_ld128_tuned"),
         (
             "ae_augmented_lgbm_ld128",
@@ -1142,7 +1324,8 @@ def run_tuning(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Phase 5 Optuna/TPE tuning for baseline_lgbm, ae_lgbm_ld128, "
+            "Phase 5 Optuna/TPE tuning for baseline_lgbm, "
+            "baseline_lgbm_entity_time_amount_features, ae_lgbm_ld128, "
             "and ae_augmented_lgbm_ld128."
         )
     )
@@ -1151,7 +1334,8 @@ def parse_args() -> argparse.Namespace:
         required=True,
         choices=SUPPORTED_MODEL_TYPES,
         help=(
-            "Model to tune: baseline_lgbm, ae_lgbm_ld128, "
+            "Model to tune: baseline_lgbm, "
+            "baseline_lgbm_entity_time_amount_features, ae_lgbm_ld128, "
             "or ae_augmented_lgbm_ld128."
         ),
     )
