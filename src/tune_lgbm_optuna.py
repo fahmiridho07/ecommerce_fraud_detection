@@ -618,9 +618,13 @@ def prepare_data(model_type: str) -> PreparedData:
     raise ValueError(f"Unsupported model_type: {model_type}")
 
 
-def fixed_lgbm_params(n_jobs: int) -> dict[str, object]:
+def fixed_lgbm_params(
+    n_jobs: int,
+    device_type: str = "cpu",
+    max_bin: int | None = None,
+) -> dict[str, object]:
     """LightGBM parameters that are fixed for every trial."""
-    return {
+    params: dict[str, object] = {
         "objective": "binary",
         "boosting_type": "gbdt",
         "n_jobs": n_jobs,
@@ -628,6 +632,11 @@ def fixed_lgbm_params(n_jobs: int) -> dict[str, object]:
         "metric": "None",
         "verbosity": -1,
     }
+    if device_type != "cpu":
+        params["device_type"] = device_type
+    if max_bin is not None:
+        params["max_bin"] = max_bin
+    return params
 
 
 def get_tuning_profile_space(tuning_profile: str) -> dict[str, dict[str, object]]:
@@ -718,11 +727,16 @@ def make_objective(
     prepared: PreparedData,
     tuning_profile: str,
     n_jobs: int,
+    device_type: str,
+    max_bin: int | None,
 ):
     def objective(trial: optuna.Trial) -> float:
-        params = fixed_lgbm_params(n_jobs) | suggest_lgbm_params(
-            trial,
-            tuning_profile,
+        params = (
+            fixed_lgbm_params(n_jobs, device_type, max_bin)
+            | suggest_lgbm_params(
+                trial,
+                tuning_profile,
+            )
         )
         model = fit_lgbm(prepared, params, log_period=0)
         score, best_iteration = validation_average_precision(model, prepared, params)
@@ -901,6 +915,8 @@ def build_run_config(
         "model_type": args.model_type,
         "tuning_profile": args.tuning_profile,
         "n_jobs": args.n_jobs,
+        "device_type": args.device_type,
+        "max_bin": args.max_bin,
         "skip_final_training": args.skip_final_training,
         "skip_global_comparison_update": args.skip_global_comparison_update,
         "final_training_completed": final_training_completed,
@@ -979,12 +995,18 @@ def save_best_params(
         "model_type": args.model_type,
         "tuning_profile": args.tuning_profile,
         "n_jobs": args.n_jobs,
+        "device_type": args.device_type,
+        "max_bin": args.max_bin,
         "skip_final_training": args.skip_final_training,
         "best_trial_number": study.best_trial.number,
         "best_validation_average_precision": float(study.best_value),
         "best_trial_user_attrs": study.best_trial.user_attrs,
         "best_params": study.best_params,
-        "fixed_params": fixed_lgbm_params(args.n_jobs),
+        "fixed_params": fixed_lgbm_params(
+            args.n_jobs,
+            args.device_type,
+            args.max_bin,
+        ),
         "search_space": search_space_summary(args.tuning_profile),
         "final_model_params": best_params,
     }
@@ -1284,7 +1306,13 @@ def run_tuning(args: argparse.Namespace) -> None:
         "test data remains untouched."
     )
     study.optimize(
-        make_objective(prepared, args.tuning_profile, args.n_jobs),
+        make_objective(
+            prepared,
+            args.tuning_profile,
+            args.n_jobs,
+            args.device_type,
+            args.max_bin,
+        ),
         n_trials=args.n_trials,
         timeout=args.timeout,
         gc_after_trial=True,
@@ -1295,7 +1323,10 @@ def run_tuning(args: argparse.Namespace) -> None:
 
     save_study_outputs(study, output_dir)
 
-    best_params = fixed_lgbm_params(args.n_jobs) | study.best_params
+    best_params = (
+        fixed_lgbm_params(args.n_jobs, args.device_type, args.max_bin)
+        | study.best_params
+    )
     save_best_params(study, best_params, output_dir, args)
 
     if args.skip_final_training:
@@ -1382,6 +1413,21 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=DEFAULT_N_JOBS,
         help="Number of LightGBM worker threads. Use 4 by default to limit CPU usage.",
+    )
+    parser.add_argument(
+        "--device-type",
+        choices=("cpu", "gpu", "cuda"),
+        default="cpu",
+        help=(
+            "LightGBM device_type. Defaults to cpu; gpu/cuda are passed through "
+            "to LightGBM for GPU training."
+        ),
+    )
+    parser.add_argument(
+        "--max-bin",
+        type=int,
+        default=None,
+        help="Optional LightGBM max_bin value, commonly tuned lower for GPU training.",
     )
     parser.add_argument(
         "--timeout",
