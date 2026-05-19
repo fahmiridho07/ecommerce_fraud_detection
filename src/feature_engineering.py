@@ -62,6 +62,71 @@ AMOUNT_STAT_GROUPS = {
     "addr1": ["addr1"],
 }
 
+UID_AMOUNT_STAT_GROUPS = {
+    "uid_card_addr": ["card1", "card2", "addr1"],
+    "uid_card_addr_email": ["card1", "addr1", "P_emaildomain"],
+    "uid_card_product": ["card1", "ProductCD"],
+    "uid_card_device": ["card1", "DeviceInfo"],
+}
+
+NUNIQUE_RELATIONSHIP_GROUPS = {
+    "nunique_P_emaildomain_by_card1": {
+        "group_column": "card1",
+        "value_column": "P_emaildomain",
+    },
+    "nunique_addr1_by_card1": {
+        "group_column": "card1",
+        "value_column": "addr1",
+    },
+    "nunique_DeviceInfo_by_card1": {
+        "group_column": "card1",
+        "value_column": "DeviceInfo",
+    },
+    "nunique_card1_by_DeviceInfo": {
+        "group_column": "DeviceInfo",
+        "value_column": "card1",
+    },
+    "nunique_card1_by_P_emaildomain": {
+        "group_column": "P_emaildomain",
+        "value_column": "card1",
+    },
+    "nunique_addr1_by_P_emaildomain": {
+        "group_column": "P_emaildomain",
+        "value_column": "addr1",
+    },
+    "nunique_ProductCD_by_card1": {
+        "group_column": "card1",
+        "value_column": "ProductCD",
+    },
+}
+
+UID_SKIPPED_BY_DESIGN_GROUPS = [
+    {
+        "group": "uid_card_email",
+        "columns": ["card1", "P_emaildomain"],
+        "reason": (
+            "Represented by existing card1_P_emaildomain count/frequency and "
+            "amount-stat features to avoid duplicate aliases."
+        ),
+    },
+    {
+        "group": "uid_card_addr_email_product",
+        "columns": ["card1", "addr1", "P_emaildomain", "ProductCD"],
+        "reason": (
+            "Skipped in first controlled UID run because read-only profiling "
+            "showed high cardinality and sparse train support."
+        ),
+    },
+    {
+        "group": "uid_card_addr_device",
+        "columns": ["card1", "addr1", "DeviceInfo"],
+        "reason": (
+            "Skipped in first controlled UID run because DeviceInfo/address "
+            "combinations are sparse and risk overfitting."
+        ),
+    },
+]
+
 AMOUNT_STAT_FEATURE_TEMPLATES = [
     "amt_mean_by_{group}",
     "amt_median_by_{group}",
@@ -184,6 +249,54 @@ def fit_amount_stat_mappings(
     return mappings, skipped_groups
 
 
+def fit_nunique_mappings(
+    X_train: pd.DataFrame,
+    relationship_specs: dict[str, dict[str, str]] | None = None,
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, object]]]:
+    """Fit train-only nunique relationship mappings for entity columns."""
+    relationship_specs = relationship_specs or NUNIQUE_RELATIONSHIP_GROUPS
+    mappings: dict[str, dict[str, Any]] = {}
+    skipped_groups: list[dict[str, object]] = []
+    train_row_count = int(len(X_train))
+
+    for feature_name, spec in relationship_specs.items():
+        group_column = spec["group_column"]
+        value_column = spec["value_column"]
+        missing_columns = [
+            column
+            for column in (group_column, value_column)
+            if column not in X_train.columns
+        ]
+        if missing_columns:
+            skipped_groups.append(
+                {
+                    "feature": feature_name,
+                    "group_column": group_column,
+                    "value_column": value_column,
+                    "missing_columns": missing_columns,
+                }
+            )
+            continue
+
+        keys = _normalize_key_part(X_train[group_column])
+        values = _normalize_key_part(X_train[value_column])
+        nunique = (
+            pd.DataFrame({"key": keys, "value": values})
+            .groupby("key", dropna=False)["value"]
+            .nunique(dropna=False)
+            .astype("int32")
+        )
+        mappings[feature_name] = {
+            "group_column": group_column,
+            "value_column": value_column,
+            "nunique": nunique,
+            "mapping_size": int(len(nunique)),
+            "train_row_count": train_row_count,
+        }
+
+    return mappings, skipped_groups
+
+
 def fit_entity_time_amount_features(X_train: pd.DataFrame) -> dict[str, Any]:
     """Fit all train-only artifacts needed by the engineered feature set."""
     validate_raw_feature_input(X_train)
@@ -230,6 +343,51 @@ def fit_entity_time_amount_features(X_train: pd.DataFrame) -> dict[str, Any]:
     return artifacts
 
 
+def fit_uid_entity_time_amount_features(X_train: pd.DataFrame) -> dict[str, Any]:
+    """Fit base features plus controlled UID-inspired relationship features."""
+    artifacts = fit_entity_time_amount_features(X_train)
+
+    uid_amount_mappings, skipped_uid_amount_groups = fit_amount_stat_mappings(
+        X_train,
+        UID_AMOUNT_STAT_GROUPS,
+    )
+    artifacts["amount_stat_mappings"].update(uid_amount_mappings)
+    artifacts["skipped_uid_amount_stat_groups"] = skipped_uid_amount_groups
+
+    nunique_mappings, skipped_nunique_groups = fit_nunique_mappings(X_train)
+    artifacts["nunique_mappings"] = nunique_mappings
+    artifacts["skipped_nunique_groups"] = skipped_nunique_groups
+    artifacts["skipped_uid_groups_by_design"] = UID_SKIPPED_BY_DESIGN_GROUPS
+    artifacts["uid_alias_policy"] = {
+        "uid_card_email": "Existing card1_P_emaildomain features are reused.",
+        "uid_card_product": "Existing ProductCD_card1 count/frequency features are reused.",
+        "uid_card_device": "Existing card1_DeviceInfo count/frequency features are reused.",
+        "uid_card_addr_email": (
+            "Existing card1_addr1_P_emaildomain count/frequency features are reused."
+        ),
+    }
+
+    amount_stat_feature_names = [
+        template.format(group=group_name)
+        for group_name in uid_amount_mappings
+        for template in AMOUNT_STAT_FEATURE_TEMPLATES
+    ]
+    nunique_feature_names = list(nunique_mappings)
+    artifacts["base_engineered_feature_names"] = list(
+        artifacts["engineered_feature_names"]
+    )
+    artifacts["uid_engineered_feature_names"] = (
+        amount_stat_feature_names + nunique_feature_names
+    )
+    artifacts["engineered_feature_names"] = (
+        artifacts["engineered_feature_names"]
+        + artifacts["uid_engineered_feature_names"]
+    )
+    artifacts["experiment_variant"] = "uid_entity_time_amount"
+    _validate_fitted_artifacts(artifacts)
+    return artifacts
+
+
 def apply_entity_time_amount_features(
     X: pd.DataFrame,
     artifacts: dict[str, Any],
@@ -249,6 +407,7 @@ def apply_entity_time_amount_features(
     _add_time_features(transformed)
     _add_count_frequency_features(transformed, artifacts)
     _add_amount_stat_features(transformed, artifacts)
+    _add_nunique_features(transformed, artifacts)
     return transformed
 
 
@@ -323,6 +482,7 @@ def unknown_rate_summary(
     summary = {
         "count_frequency": {},
         "amount_stats": {},
+        "nunique": {},
     }
 
     for group_name, mapping in artifacts["count_frequency_mappings"].items():
@@ -335,6 +495,12 @@ def unknown_rate_summary(
         key = build_combo_key(X, mapping["columns"])
         summary["amount_stats"][group_name] = float(
             (~key.isin(mapping["stats"].index)).mean()
+        )
+
+    for feature_name, mapping in artifacts.get("nunique_mappings", {}).items():
+        key = _normalize_key_part(X[mapping["group_column"]])
+        summary["nunique"][feature_name] = float(
+            (~key.isin(mapping["nunique"].index)).mean()
         )
 
     return summary
@@ -371,6 +537,18 @@ def feature_engineering_summary(artifacts: dict[str, Any]) -> dict[str, object]:
             }
         )
 
+    nunique_relationship_groups = []
+    for feature_name, mapping in artifacts.get("nunique_mappings", {}).items():
+        nunique_relationship_groups.append(
+            {
+                "feature": feature_name,
+                "group_column": mapping["group_column"],
+                "value_column": mapping["value_column"],
+                "mapping_size": int(mapping["mapping_size"]),
+                "train_row_count": int(mapping["train_row_count"]),
+            }
+        )
+
     return {
         "fit_row_count": int(artifacts["fit_row_count"]),
         "train_time_min": artifacts["train_time_min"],
@@ -380,17 +558,42 @@ def feature_engineering_summary(artifacts: dict[str, Any]) -> dict[str, object]:
         "time_features": artifacts["time_features"],
         "count_frequency_groups": count_groups,
         "amount_stat_groups": amount_stat_groups,
+        "nunique_relationship_groups": nunique_relationship_groups,
         "skipped_count_frequency_groups": artifacts["skipped_count_frequency_groups"],
         "skipped_amount_stat_groups": artifacts["skipped_amount_stat_groups"],
+        "skipped_uid_amount_stat_groups": artifacts.get(
+            "skipped_uid_amount_stat_groups",
+            [],
+        ),
+        "skipped_nunique_groups": artifacts.get("skipped_nunique_groups", []),
+        "skipped_uid_groups_by_design": artifacts.get(
+            "skipped_uid_groups_by_design",
+            [],
+        ),
         "global_amount_stats": artifacts["global_amount_stats"],
         "engineered_feature_names": artifacts["engineered_feature_names"],
         "engineered_feature_count": int(len(artifacts["engineered_feature_names"])),
+        "base_engineered_feature_count": len(
+            artifacts.get(
+                "base_engineered_feature_names",
+                artifacts["engineered_feature_names"],
+            )
+        ),
+        "uid_engineered_feature_names": artifacts.get(
+            "uid_engineered_feature_names",
+            [],
+        ),
+        "uid_engineered_feature_count": len(
+            artifacts.get("uid_engineered_feature_names", [])
+        ),
         "internal_combo_key_columns_retained": bool(
             artifacts["internal_combo_key_columns_retained"]
         ),
+        "uid_alias_policy": artifacts.get("uid_alias_policy", {}),
         "uid_duplicate_policy": (
-            "uid_card_email is represented by card1_P_emaildomain; "
-            "uid_card_addr_email is represented by card1_addr1_P_emaildomain."
+            "Duplicate count/frequency aliases are not emitted; existing "
+            "card1_P_emaildomain, card1_addr1_P_emaildomain, ProductCD_card1, "
+            "and card1_DeviceInfo features are reused where applicable."
         ),
     }
 
@@ -550,6 +753,17 @@ def _add_amount_stat_features(
         ).astype("float32")
 
 
+def _add_nunique_features(
+    X: pd.DataFrame,
+    artifacts: dict[str, Any],
+) -> None:
+    for feature_name, mapping in artifacts.get("nunique_mappings", {}).items():
+        key = _normalize_key_part(X[mapping["group_column"]])
+        X[feature_name] = (
+            key.map(mapping["nunique"]).fillna(0).astype("int32")
+        )
+
+
 def _validate_fitted_artifacts(artifacts: dict[str, Any]) -> None:
     fit_row_count = int(artifacts["fit_row_count"])
     for group_name, mapping in artifacts["count_frequency_mappings"].items():
@@ -567,3 +781,9 @@ def _validate_fitted_artifacts(artifacts: dict[str, Any]) -> None:
             raise ValueError(f"Amount-stat mapping row count mismatch for {group_name}.")
         if int(mapping["mapping_size"]) != len(mapping["stats"]):
             raise ValueError(f"Amount-stat mapping size mismatch for {group_name}.")
+
+    for feature_name, mapping in artifacts.get("nunique_mappings", {}).items():
+        if int(mapping["train_row_count"]) != fit_row_count:
+            raise ValueError(f"Nunique mapping row count mismatch for {feature_name}.")
+        if int(mapping["mapping_size"]) != len(mapping["nunique"]):
+            raise ValueError(f"Nunique mapping size mismatch for {feature_name}.")

@@ -31,9 +31,7 @@ This repository contains an undergraduate thesis implementation for e-commerce f
 |-- data/
 |   `-- raw/                    # Local Kaggle dataset files
 |-- notebooks/
-|   |-- eda.ipynb
-|   |-- kaggle_runner.ipynb
-|   `-- ta-fraud-detection.ipynb
+|   `-- thesis_experiment_report.ipynb
 |-- outputs/                    # Generated experiment artifacts
 |-- src/
 |   |-- check_data_split.py
@@ -45,6 +43,16 @@ This repository contains an undergraduate thesis implementation for e-commerce f
 |-- requirements.txt
 `-- README.md
 ```
+
+## Notebook Report
+
+The main supervisor-facing notebook is:
+
+```text
+notebooks/thesis_experiment_report.ipynb
+```
+
+It is a clean reporting notebook for thesis guidance. It loads existing artifacts from `outputs/`, summarizes the methodology and final results, and includes lightweight EDA and diagnostic visualizations. It does **not** retrain models or rerun Optuna/Autoencoder experiments.
 
 ## Run Locally
 

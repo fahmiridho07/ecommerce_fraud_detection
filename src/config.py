@@ -20,6 +20,12 @@ BASELINE_OUTPUT_DIR = OUTPUT_DIR / "baseline_lgbm"
 FEATURE_ENGINEERED_LGBM_OUTPUT_DIR = (
     OUTPUT_DIR / "baseline_lgbm_entity_time_amount_features"
 )
+UID_FEATURE_ENGINEERED_LGBM_OUTPUT_DIR = (
+    OUTPUT_DIR / "baseline_lgbm_entity_time_amount_uid_features"
+)
+HISTORICAL_VELOCITY_LGBM_OUTPUT_DIR = (
+    OUTPUT_DIR / "baseline_lgbm_entity_time_amount_historical_velocity_features"
+)
 AUTOENCODER_OUTPUT_DIR = OUTPUT_DIR / "autoencoder"
 AUTOENCODER_ROBUST_OUTPUT_DIR = OUTPUT_DIR / "autoencoder_robust"
 AUTOENCODER_ROBUST_LD64_OUTPUT_DIR = OUTPUT_DIR / "autoencoder_robust_ld64"
@@ -59,6 +65,17 @@ AE_AUGMENTED_COMPARISON_FILE = FINAL_COMPARISON_OUTPUT_DIR / "ae_augmented_compa
 NEXT_CONTROLLED_EXPERIMENTS_COMPARISON_FILE = (
     FINAL_COMPARISON_OUTPUT_DIR / "next_controlled_experiments.csv"
 )
+FE_AE_CONTROLLED_OUTPUT_DIR = OUTPUT_DIR / "fe_ae_controlled_experiments"
+FE_AE_SCORE_ENSEMBLE_OUTPUT_DIR = (
+    FE_AE_CONTROLLED_OUTPUT_DIR / "A_score_ensemble_fe_tuned_ae_tuned"
+)
+FE_RECON_ERROR_LGBM_OUTPUT_DIR = (
+    FE_AE_CONTROLLED_OUTPUT_DIR / "B_fe_lgbm_reconstruction_mse_default"
+)
+FE_AE_AUGMENTED_LGBM_OUTPUT_DIR = (
+    FE_AE_CONTROLLED_OUTPUT_DIR / "C_fe_lgbm_latent128_reconstruction_mse_default"
+)
+FE_AE_CONTROLLED_COMPARISON_FILE = FE_AE_CONTROLLED_OUTPUT_DIR / "comparison.csv"
 
 RANDOM_SEED = 42
 
@@ -90,6 +107,12 @@ OUTPUT_PATHS = {
     "baseline_lgbm": BASELINE_OUTPUT_DIR,
     "baseline_lgbm_entity_time_amount_features": (
         FEATURE_ENGINEERED_LGBM_OUTPUT_DIR
+    ),
+    "baseline_lgbm_entity_time_amount_uid_features": (
+        UID_FEATURE_ENGINEERED_LGBM_OUTPUT_DIR
+    ),
+    "baseline_lgbm_entity_time_amount_historical_velocity_features": (
+        HISTORICAL_VELOCITY_LGBM_OUTPUT_DIR
     ),
     "autoencoder": AUTOENCODER_OUTPUT_DIR,
     "autoencoder_robust": AUTOENCODER_ROBUST_OUTPUT_DIR,
@@ -123,4 +146,8 @@ OUTPUT_PATHS = {
     ),
     "optuna": OPTUNA_OUTPUT_DIR,
     "final_comparison": FINAL_COMPARISON_OUTPUT_DIR,
+    "fe_ae_controlled_experiments": FE_AE_CONTROLLED_OUTPUT_DIR,
+    "fe_ae_score_ensemble": FE_AE_SCORE_ENSEMBLE_OUTPUT_DIR,
+    "fe_reconstruction_error_lgbm": FE_RECON_ERROR_LGBM_OUTPUT_DIR,
+    "fe_ae_augmented_lgbm": FE_AE_AUGMENTED_LGBM_OUTPUT_DIR,
 }

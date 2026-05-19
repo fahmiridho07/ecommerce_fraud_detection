@@ -12,6 +12,7 @@ from config import (
     BASELINE_OUTPUT_DIR,
     FEATURE_ENGINEERED_LGBM_OUTPUT_DIR,
     FINAL_COMPARISON_OUTPUT_DIR,
+    HISTORICAL_VELOCITY_LGBM_OUTPUT_DIR,
     NEXT_CONTROLLED_EXPERIMENTS_COMPARISON_FILE,
     OPTUNA_OUTPUT_DIR,
     RECON_ERROR_LGBM_NORMAL_ONLY_RAW_OUTPUT_DIR,
@@ -19,6 +20,7 @@ from config import (
     RECON_ERROR_LGBM_ROBUST_RAW_LOG1P_OUTPUT_DIR,
     RECON_ERROR_LGBM_ROBUST_RAW_OUTPUT_DIR,
     SCORE_ENSEMBLE_TUNED_OUTPUT_DIR,
+    UID_FEATURE_ENGINEERED_LGBM_OUTPUT_DIR,
 )
 from utils import ensure_dir
 
@@ -122,6 +124,14 @@ def build_comparison_table() -> pd.DataFrame:
         (
             "baseline_lgbm_entity_time_amount_features_tuned",
             OPTUNA_OUTPUT_DIR / "baseline_lgbm_entity_time_amount_features",
+        ),
+        (
+            "baseline_lgbm_entity_time_amount_uid_features_default",
+            UID_FEATURE_ENGINEERED_LGBM_OUTPUT_DIR,
+        ),
+        (
+            "baseline_lgbm_entity_time_amount_historical_velocity_features_default",
+            HISTORICAL_VELOCITY_LGBM_OUTPUT_DIR,
         ),
         ("ae_lgbm_ld128_default", AE_LGBM_LD128_OUTPUT_DIR),
         ("ae_lgbm_ld128_tuned", OPTUNA_OUTPUT_DIR / "ae_lgbm_ld128"),
