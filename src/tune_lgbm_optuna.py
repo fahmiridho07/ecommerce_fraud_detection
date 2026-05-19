@@ -902,9 +902,11 @@ def build_run_config(
         "tuning_profile": args.tuning_profile,
         "n_jobs": args.n_jobs,
         "skip_final_training": args.skip_final_training,
+        "skip_global_comparison_update": args.skip_global_comparison_update,
         "final_training_completed": final_training_completed,
         "data_dir": str(DATA_DIR),
         "output_dir": str(output_dir),
+        "output_dir_override": str(args.output_dir) if args.output_dir else None,
         "sample_size": SAMPLE_SIZE,
         "is_local_debugging_sample": SAMPLE_SIZE is not None,
         "target_column": TARGET_COL,
@@ -1255,12 +1257,19 @@ def print_study_only_summary(
     print(f"Outputs saved to       : {output_dir}")
 
 
+def resolved_tuned_output_dir(args: argparse.Namespace) -> Path:
+    return args.output_dir or TUNED_OUTPUT_DIRS[args.model_type]
+
+
 def run_tuning(args: argparse.Namespace) -> None:
     set_seed(RANDOM_SEED)
-    output_dir = ensure_dir(TUNED_OUTPUT_DIRS[args.model_type])
+    output_dir = ensure_dir(resolved_tuned_output_dir(args))
 
     if args.skip_existing and output_complete(output_dir, args.model_type):
         log(f"Skipping {args.model_type}; complete Optuna outputs already exist.")
+        if args.skip_global_comparison_update:
+            log("Skipping global Optuna comparison update by request.")
+            return
         table = save_optuna_comparison_table()
         print_final_summary(table)
         return
@@ -1316,6 +1325,23 @@ def run_tuning(args: argparse.Namespace) -> None:
         final_result,
     )
     save_json(run_config, output_dir / "run_config.json")
+
+    if args.skip_global_comparison_update:
+        log("Skipping global Optuna comparison update by request.")
+        print()
+        print("Optuna Tuning Summary")
+        print("=====================")
+        print(f"Model type             : {args.model_type}")
+        print(f"Tuning profile         : {args.tuning_profile}")
+        print(f"Completed trials       : {completed_trial_count(study)}")
+        print(f"Best validation PR-AUC : {study.best_value:.6f}")
+        print(f"Best trial             : {study.best_trial.number}")
+        print(
+            "Test PR-AUC             : "
+            f"{final_result['metrics_test_selected']['average_precision']:.6f}"
+        )
+        print(f"Outputs saved to       : {output_dir}")
+        return
 
     table = save_optuna_comparison_table()
     print_final_summary(table)
@@ -1374,6 +1400,15 @@ def parse_args() -> argparse.Namespace:
         help="Optional Optuna storage URL, e.g. sqlite:///outputs/optuna/study.db.",
     )
     parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional output directory override for all tuned artifacts. "
+            "Defaults to outputs/optuna/<model_type>."
+        ),
+    )
+    parser.add_argument(
         "--skip_existing",
         action="store_true",
         help="Reuse complete existing outputs for the requested model_type.",
@@ -1384,6 +1419,14 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Run Optuna and save tuning artifacts, but skip final model training, "
             "threshold selection, test evaluation, and optuna_comparison.csv update."
+        ),
+    )
+    parser.add_argument(
+        "--skip-global-comparison-update",
+        action="store_true",
+        help=(
+            "Do not rewrite the hardcoded global outputs/final_comparison/"
+            "optuna_comparison.csv table."
         ),
     )
     args = parser.parse_args()
