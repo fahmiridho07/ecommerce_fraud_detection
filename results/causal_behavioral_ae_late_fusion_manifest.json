@@ -1,7 +1,7 @@
 {
   "experiment_id": "LF01",
   "experiment_name": "Causal Behavioral + AE-LightGBM Late Fusion",
-  "commit_sha": "acc20da2ecd1cb370d937cd0fc9967d47c6dcdc2",
+  "commit_sha": "6b953e8",
   "exception_to_post_tae01_freeze": true,
   "supervisor_approval_required_for_primary_promotion": true,
   "source_expert_outputs": {
