@@ -34,6 +34,28 @@ AE_LGBM_OUTPUT_DIR = OUTPUT_DIR / "ae_lgbm"
 AE_LGBM_LD64_OUTPUT_DIR = OUTPUT_DIR / "ae_lgbm_ld64"
 AE_LGBM_LD128_OUTPUT_DIR = OUTPUT_DIR / "ae_lgbm_ld128"
 AE_AUGMENTED_LGBM_LD128_OUTPUT_DIR = OUTPUT_DIR / "ae_augmented_lgbm_ld128"
+AE_LATENT_ONLY_AUGMENTED_LGBM_LD128_OUTPUT_DIR = (
+    OUTPUT_DIR / "ae_latent_only_augmented_lgbm_ld128"
+)
+SELECTED_NUMERICAL_AE_FEATURE_AUDIT_OUTPUT_DIR = (
+    OUTPUT_DIR / "selected_numerical_ae_feature_audit"
+)
+SELECTED_NUMERICAL_AE_FEATURE_AUDIT_FILE = (
+    SELECTED_NUMERICAL_AE_FEATURE_AUDIT_OUTPUT_DIR / "selected_numerical_features.json"
+)
+AUTOENCODER_SELECTED_NUMERICAL_LD128_OUTPUT_DIR = (
+    OUTPUT_DIR / "autoencoder_selected_numerical_ld128"
+)
+SELECTED_NUMERICAL_AE_LGBM_LD128_OUTPUT_DIR = (
+    OUTPUT_DIR / "selected_numerical_ae_lgbm_ld128"
+)
+TASK_AWARE_AUTOENCODER_SELECTED_NUMERICAL_LD128_OUTPUT_DIR = (
+    OUTPUT_DIR / "task_aware_autoencoder_selected_numerical_ld128"
+)
+TASK_AWARE_AE_LGBM_LD128_OUTPUT_DIR = OUTPUT_DIR / "task_aware_ae_lgbm_ld128"
+SELECTED_NUMERICAL_RECONSTRUCTED_LGBM_OUTPUT_DIR = (
+    OUTPUT_DIR / "selected_numerical_reconstructed_lgbm"
+)
 SCORE_ENSEMBLE_TUNED_OUTPUT_DIR = (
     OUTPUT_DIR / "score_ensemble_baseline_tuned_ae_lgbm_ld128_tuned"
 )
@@ -60,8 +82,23 @@ RECON_ERROR_LGBM_NORMAL_ONLY_RAW_LOG1P_OUTPUT_DIR = (
 )
 OPTUNA_OUTPUT_DIR = OUTPUT_DIR / "optuna"
 FINAL_COMPARISON_OUTPUT_DIR = OUTPUT_DIR / "final_comparison"
+TASK_AWARE_LAMBDA_SELECTION_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "task_aware_lambda_selection.csv"
+)
+TASK_AWARE_AE_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "task_aware_ae_comparison.csv"
+)
+AUTOENCODER_INPUT_SCOPE_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "autoencoder_input_scope_comparison.csv"
+)
+AUTOENCODER_OUTPUT_STRATEGY_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "autoencoder_output_strategy_comparison.csv"
+)
 LATENT_DIM_ABLATION_FILE = FINAL_COMPARISON_OUTPUT_DIR / "latent_dim_ablation.csv"
 AE_AUGMENTED_COMPARISON_FILE = FINAL_COMPARISON_OUTPUT_DIR / "ae_augmented_comparison.csv"
+LATENT_INTEGRATION_STRATEGY_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "latent_integration_strategy_comparison.csv"
+)
 NEXT_CONTROLLED_EXPERIMENTS_COMPARISON_FILE = (
     FINAL_COMPARISON_OUTPUT_DIR / "next_controlled_experiments.csv"
 )
@@ -88,6 +125,21 @@ FE_CDV_RECON_ERROR_LGBM_OUTPUT_DIR = (
 )
 BEHAVIORAL_CDV_AE_COMPARISON_FILE = (
     BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR / "comparison.csv"
+)
+CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_feature_audit"
+)
+CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_lgbm_default"
+)
+CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_cdv_reconstruction_lgbm_default"
+)
+CAUSAL_BEHAVIORAL_AE_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_ae_comparison.csv"
+)
+CAUSAL_BEHAVIORAL_FEATURE_IMPORTANCE_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_feature_importance.csv"
 )
 SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR = OUTPUT_DIR / "split_strategy_appendix"
 SPLIT_STRATEGY_APPENDIX_COMPARISON_FILE = (
@@ -142,6 +194,25 @@ OUTPUT_PATHS = {
     "ae_lgbm_ld64": AE_LGBM_LD64_OUTPUT_DIR,
     "ae_lgbm_ld128": AE_LGBM_LD128_OUTPUT_DIR,
     "ae_augmented_lgbm_ld128": AE_AUGMENTED_LGBM_LD128_OUTPUT_DIR,
+    "ae_latent_only_augmented_lgbm_ld128": (
+        AE_LATENT_ONLY_AUGMENTED_LGBM_LD128_OUTPUT_DIR
+    ),
+    "selected_numerical_ae_feature_audit": (
+        SELECTED_NUMERICAL_AE_FEATURE_AUDIT_OUTPUT_DIR
+    ),
+    "autoencoder_selected_numerical_ld128": (
+        AUTOENCODER_SELECTED_NUMERICAL_LD128_OUTPUT_DIR
+    ),
+    "selected_numerical_ae_lgbm_ld128": (
+        SELECTED_NUMERICAL_AE_LGBM_LD128_OUTPUT_DIR
+    ),
+    "task_aware_autoencoder_selected_numerical_ld128": (
+        TASK_AWARE_AUTOENCODER_SELECTED_NUMERICAL_LD128_OUTPUT_DIR
+    ),
+    "task_aware_ae_lgbm_ld128": TASK_AWARE_AE_LGBM_LD128_OUTPUT_DIR,
+    "selected_numerical_reconstructed_lgbm": (
+        SELECTED_NUMERICAL_RECONSTRUCTED_LGBM_OUTPUT_DIR
+    ),
     "score_ensemble_baseline_tuned_ae_lgbm_ld128_tuned": (
         SCORE_ENSEMBLE_TUNED_OUTPUT_DIR
     ),
@@ -175,5 +246,10 @@ OUTPUT_PATHS = {
         BEHAVIORAL_CDV_AUTOENCODER_LD128_OUTPUT_DIR
     ),
     "fe_cdv_reconstruction_error_lgbm": FE_CDV_RECON_ERROR_LGBM_OUTPUT_DIR,
+    "causal_behavioral_feature_audit": CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR,
+    "causal_behavioral_lgbm_default": CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR,
+    "causal_behavioral_cdv_reconstruction_lgbm_default": (
+        CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR
+    ),
     "split_strategy_appendix": SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR,
 }

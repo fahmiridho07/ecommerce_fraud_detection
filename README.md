@@ -20,7 +20,7 @@ This repository contains an undergraduate thesis implementation for e-commerce f
 
 - **Temporal split:** labeled train data is sorted by `TransactionDT` and split chronologically into train, validation, and test sets.
 - **Main models:** LightGBM baseline, Robust Autoencoder for `V`-features, and AE-LightGBM.
-- **Tuning:** Optuna is used for hyperparameter search, with final tuning still in progress.
+- **Tuning:** Optuna TPE tuning is implemented and completed for the primary baseline and AE-LightGBM LD128 candidates (`outputs/optuna/`).
 - **Primary metric:** PR-AUC / Average Precision, chosen because fraud detection is highly imbalanced.
 - **Leakage-aware evaluation:** preprocessing, representation learning, threshold selection, and tuning are fitted only on the allowed split for each phase.
 
@@ -102,11 +102,22 @@ Kaggle competition test files are **not used for metric evaluation** because the
 
 ## Current Status
 
-- LightGBM baseline pipeline: ready
-- Robust Autoencoder representation learning: ready
-- AE-LightGBM pipeline: ready
-- Optuna final tuning: running
-- Final comparison summary: pending after tuning finishes
+- LightGBM baseline pipeline: executed (`outputs/baseline_lgbm/`)
+- Robust Autoencoder representation learning: executed (`outputs/autoencoder_robust/`)
+- AE-LightGBM replacement pipeline: executed (`outputs/ae_lgbm/`)
+- Optuna tuning (baseline + AE LD128): executed (`outputs/optuna/`)
+- Comparison summaries: available (`outputs/final_comparison/`)
+- Experiment governance docs: [`docs/EXPERIMENT_REGISTRY.md`](docs/EXPERIMENT_REGISTRY.md), [`docs/FINAL_EXPERIMENT_PLAN.md`](docs/FINAL_EXPERIMENT_PLAN.md), [`docs/EXPERIMENT_SCOPE_FREEZE.md`](docs/EXPERIMENT_SCOPE_FREEZE.md)
+
+### Primary chronological finding (validation-selected)
+
+On the frozen primary comparison, **tuned original-feature LightGBM (P02)** outperforms the **tuned AE replacement candidate (P04)** on both validation AP (0.624072 vs 0.610631) and test AP (0.501438 vs 0.490686). AE latent replacement did not improve over the original-feature baseline in the executed pipeline. The highest historical test AP in exploratory branches does **not** automatically define the final thesis model.
+
+## Experiment Governance
+
+Experiments are divided into four governance categories: **primary thesis experiments**, **Autoencoder diagnostics**, **methodological diagnostics**, and **exploratory archive**. Chronological evaluation on `TransactionDT` is the primary protocol; stratified holdout and stratified CV are appendix sensitivity analyses only and must not be used to choose the final thesis model.
+
+Historical experiments remain available locally under `outputs/` for reproducibility audit. The authoritative experiment map is [`docs/EXPERIMENT_REGISTRY.md`](docs/EXPERIMENT_REGISTRY.md). The frozen final scope and reporting policy are defined in [`docs/FINAL_EXPERIMENT_PLAN.md`](docs/FINAL_EXPERIMENT_PLAN.md) and [`docs/EXPERIMENT_SCOPE_FREEZE.md`](docs/EXPERIMENT_SCOPE_FREEZE.md). Small result summaries recommended for later Git tracking are listed in [`docs/RESULT_ARTIFACT_MANIFEST.md`](docs/RESULT_ARTIFACT_MANIFEST.md).
 
 ## Author
 

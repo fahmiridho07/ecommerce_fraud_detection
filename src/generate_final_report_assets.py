@@ -21,7 +21,7 @@ FINAL_REPORT_DIR = OUTPUT_DIR / "final_report"
 FE_TUNED_OUTPUT_DIR = OUTPUT_DIR / "optuna" / "baseline_lgbm_entity_time_amount_features"
 
 COMPARISON_COLUMNS = [
-    "rank",
+    "descriptive_test_rank",
     "model_id",
     "model_name",
     "model_family",
@@ -133,6 +133,22 @@ FINAL_MODELS = [
         "test_metrics_files": ["metrics_test_selected_threshold.json"],
         "validation_metrics_files": ["metrics_validation_selected_threshold.json"],
         "fallback": {"test_pr_auc": 0.496067},
+    },
+    {
+        "model_id": "ae_lgbm_ld32_default",
+        "model_name": "AE-LightGBM LD32 replacement default",
+        "model_family": "ae_lgbm",
+        "variant": "latent_dim_32_replacement",
+        "is_tuned": False,
+        "is_standalone": True,
+        "is_baseline": False,
+        "output_dir": OUTPUT_DIR / "ae_lgbm",
+        "test_metrics_files": ["metrics_test_selected_threshold.json"],
+        "validation_metrics_files": ["metrics_validation_selected_threshold.json"],
+        "fallback": {
+            "validation_pr_auc": 0.591398,
+            "test_pr_auc": 0.481593,
+        },
     },
     {
         "model_id": "ae_lgbm_ld128_tuned",
@@ -267,7 +283,7 @@ def build_model_row(spec: dict[str, Any]) -> dict[str, Any]:
     fallback = spec.get("fallback", {})
 
     row = {
-        "rank": None,
+        "descriptive_test_rank": None,
         "model_id": spec["model_id"],
         "model_name": spec["model_name"],
         "model_family": spec["model_family"],
@@ -311,7 +327,8 @@ def build_model_row(spec: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def sort_and_rank(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sort_by_descriptive_test_rank(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Order rows by observed test AP for descriptive reporting only."""
     sorted_rows = sorted(
         rows,
         key=lambda row: (
@@ -321,8 +338,31 @@ def sort_and_rank(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         reverse=True,
     )
     for rank, row in enumerate(sorted_rows, start=1):
-        row["rank"] = rank
+        row["descriptive_test_rank"] = rank
     return sorted_rows
+
+
+THESIS_PRIMARY_MODEL_IDS = (
+    "baseline_lgbm_default",
+    "baseline_lgbm_tuned",
+    "ae_lgbm_ld32_default",
+    "ae_lgbm_ld128_tuned",
+)
+
+
+def thesis_primary_validation_leader(
+    rows: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Return the primary-model row with the highest validation AP."""
+    primary_rows = [
+        row
+        for row in rows
+        if row["model_id"] in THESIS_PRIMARY_MODEL_IDS
+        and row.get("validation_pr_auc") is not None
+    ]
+    if not primary_rows:
+        return None
+    return max(primary_rows, key=lambda row: float(row["validation_pr_auc"]))
 
 
 def write_csv(rows: list[dict[str, Any]], path: Path, columns: list[str]) -> None:
@@ -344,8 +384,9 @@ def markdown_value(value: Any) -> str:
 
 def write_model_comparison_markdown(rows: list[dict[str, Any]], path: Path) -> None:
     columns = [
-        ("rank", "Rank"),
+        ("descriptive_test_rank", "Descriptive test rank"),
         ("model_name", "Model"),
+        ("validation_pr_auc", "Validation PR-AUC"),
         ("test_pr_auc", "Test PR-AUC"),
         ("test_roc_auc", "Test ROC-AUC"),
         ("test_f1", "F1"),
@@ -355,7 +396,10 @@ def write_model_comparison_markdown(rows: list[dict[str, Any]], path: Path) -> N
     lines = [
         "# Final Model Comparison",
         "",
-        "Models are ranked by test PR-AUC on the chronological test split.",
+        "Descriptive test ranks are ordered by observed test PR-AUC on the "
+        "chronological test split. This table is **not** a model-selection rule.",
+        "Thesis-primary model choice must use validation AP on the frozen primary "
+        "comparison defined in `docs/EXPERIMENT_SCOPE_FREEZE.md`.",
         "",
         "| " + " | ".join(label for _, label in columns) + " |",
         "| " + " | ".join("---" for _ in columns) + " |",
@@ -374,9 +418,10 @@ def write_model_comparison_markdown(rows: list[dict[str, Any]], path: Path) -> N
 
 def as_summary_model(row: dict[str, Any]) -> dict[str, Any]:
     return {
-        "rank": row.get("rank"),
+        "descriptive_test_rank": row.get("descriptive_test_rank"),
         "model_id": row.get("model_id"),
         "model_name": row.get("model_name"),
+        "validation_pr_auc": row.get("validation_pr_auc"),
         "test_pr_auc": row.get("test_pr_auc"),
         "test_roc_auc": row.get("test_roc_auc"),
         "test_f1": row.get("test_f1"),
@@ -405,19 +450,47 @@ def metric_delta(
 
 
 def build_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    best_overall = rows[0]
+    highest_observed_test_ap = rows[0]
     standalone_rows = [row for row in rows if row["is_standalone"]]
     baseline_rows = [row for row in rows if row["is_baseline"]]
-    best_standalone = standalone_rows[0]
-    best_baseline = baseline_rows[0]
+    highest_observed_test_ap_standalone = standalone_rows[0]
+    highest_observed_test_ap_baseline = baseline_rows[0]
+    validation_leader = thesis_primary_validation_leader(rows)
 
     return {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "ranking_purpose": (
+            "descriptive_test_ranking_not_model_selection"
+        ),
         "ranking_metric": "test_pr_auc",
         "evaluation_split": "chronological test split",
-        "best_overall_model": as_summary_model(best_overall),
-        "best_standalone_model": as_summary_model(best_standalone),
-        "best_baseline_model": as_summary_model(best_baseline),
+        "governance_note": (
+            "Highest observed test AP is descriptive only. Thesis-primary model "
+            "selection must use validation AP on the frozen primary comparison."
+        ),
+        "highest_observed_test_ap_model": as_summary_model(
+            highest_observed_test_ap
+        ),
+        "highest_observed_test_ap_standalone_model": as_summary_model(
+            highest_observed_test_ap_standalone
+        ),
+        "highest_observed_test_ap_baseline_model": as_summary_model(
+            highest_observed_test_ap_baseline
+        ),
+        "thesis_primary_validation_leader": (
+            as_summary_model(validation_leader)
+            if validation_leader is not None
+            else None
+        ),
+        # Deprecated aliases retained for backward compatibility when reading
+        # old summaries. Do not use these fields for model selection.
+        "best_overall_model": as_summary_model(highest_observed_test_ap),
+        "best_standalone_model": as_summary_model(
+            highest_observed_test_ap_standalone
+        ),
+        "best_baseline_model": as_summary_model(
+            highest_observed_test_ap_baseline
+        ),
         "contributions": {
             "ae_contribution": {
                 "ensemble_vs_fe_tuned_test_pr_auc_delta": metric_delta(
@@ -499,33 +572,60 @@ def write_interpretation_notes(summary: dict[str, Any], path: Path) -> None:
         "fe_tuned_vs_baseline_tuned_test_pr_auc_delta"
     ]
 
+    validation_leader = summary.get("thesis_primary_validation_leader")
+    highest_test = summary["highest_observed_test_ap_model"]
+
     lines = [
         "# Interpretation Notes",
         "",
+        "## Governance",
+        "",
+        "- Descriptive test ranks are not a model-selection rule.",
+        "- Thesis-primary model choice must use validation AP on the frozen "
+        "primary comparison in `docs/EXPERIMENT_SCOPE_FREEZE.md`.",
+        "",
         "## Thesis-ready findings",
         "",
-        "- Best overall model: "
-        f"{summary['best_overall_model']['model_name']} "
-        f"(test PR-AUC {summary['best_overall_model']['test_pr_auc']:.6f}).",
-        "- Best standalone model: "
-        f"{summary['best_standalone_model']['model_name']} "
-        f"(test PR-AUC {summary['best_standalone_model']['test_pr_auc']:.6f}).",
-        "- Best baseline: "
-        f"{summary['best_baseline_model']['model_name']} "
-        f"(test PR-AUC {summary['best_baseline_model']['test_pr_auc']:.6f}).",
-        "- AE standalone did not outperform tuned LightGBM "
-        f"(delta vs tuned baseline: {fmt_delta(ae_standalone_delta)} test PR-AUC).",
-        "- AE latent replacement or augmentation appears less effective because "
-        "IEEE-CIS V-features are already highly engineered.",
-        "- AE still provides complementary probabilistic signal when ensembled "
-        f"with FE-LGBM (delta vs FE-LGBM tuned: {fmt_delta(ae_delta)} test PR-AUC).",
-        "- Entity, time, and amount feature engineering produced the largest "
-        "standalone improvement "
-        f"(default delta: {fmt_delta(fe_default_delta)}, "
-        f"tuned delta: {fmt_delta(fe_tuned_delta)} test PR-AUC).",
-        "- The chronological split makes the evaluation harder and more realistic "
-        "than a random split because later transactions are held out for testing.",
+        "- Highest observed test AP (descriptive only): "
+        f"{highest_test['model_name']} "
+        f"(test PR-AUC {highest_test['test_pr_auc']:.6f}).",
     ]
+    if validation_leader is not None:
+        lines.extend(
+            [
+                "- Thesis-primary validation leader among frozen primary models: "
+                f"{validation_leader['model_name']} "
+                f"(validation PR-AUC {validation_leader['validation_pr_auc']:.6f}).",
+            ]
+        )
+    lines.extend(
+        [
+        "- Highest observed test AP standalone model: "
+        f"{summary['highest_observed_test_ap_standalone_model']['model_name']} "
+        f"(test PR-AUC "
+        f"{summary['highest_observed_test_ap_standalone_model']['test_pr_auc']:.6f}).",
+        "- Highest observed test AP baseline model: "
+        f"{summary['highest_observed_test_ap_baseline_model']['model_name']} "
+        f"(test PR-AUC "
+        f"{summary['highest_observed_test_ap_baseline_model']['test_pr_auc']:.6f}).",
+        ]
+    )
+    lines.extend(
+        [
+            "- AE standalone did not outperform tuned LightGBM "
+            f"(delta vs tuned baseline: {fmt_delta(ae_standalone_delta)} test PR-AUC).",
+            "- AE latent replacement or augmentation appears less effective because "
+            "IEEE-CIS V-features are already highly engineered.",
+            "- AE still provides complementary probabilistic signal when ensembled "
+            f"with FE-LGBM (delta vs FE-LGBM tuned: {fmt_delta(ae_delta)} test PR-AUC).",
+            "- Entity, time, and amount feature engineering produced the largest "
+            "standalone improvement "
+            f"(default delta: {fmt_delta(fe_default_delta)}, "
+            f"tuned delta: {fmt_delta(fe_tuned_delta)} test PR-AUC).",
+            "- The chronological split makes the evaluation harder and more realistic "
+            "than a random split because later transactions are held out for testing.",
+        ]
+    )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -609,7 +709,9 @@ def write_feature_importance_assets() -> dict[str, Any]:
 def main() -> None:
     ensure_dir(FINAL_REPORT_DIR)
 
-    rows = sort_and_rank([build_model_row(spec) for spec in FINAL_MODELS])
+    rows = sort_by_descriptive_test_rank(
+        [build_model_row(spec) for spec in FINAL_MODELS]
+    )
     write_csv(
         rows,
         FINAL_REPORT_DIR / "final_model_comparison.csv",

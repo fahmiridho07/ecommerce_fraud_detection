@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 from utils import ensure_dir
@@ -77,6 +78,86 @@ def raw_float_feature_matrix(
     return df.loc[:, feature_columns].fillna(0).astype("float32")
 
 
+def raw_float_feature_matrix_unfilled(
+    df: pd.DataFrame,
+    feature_columns: list[str],
+) -> pd.DataFrame:
+    """Select a numeric AE block and cast without imputing missing values."""
+    if not feature_columns:
+        raise ValueError("At least one Autoencoder feature column is required.")
+    missing_columns = [column for column in feature_columns if column not in df.columns]
+    if missing_columns:
+        raise KeyError(
+            "Autoencoder input is missing feature column(s): "
+            + ", ".join(missing_columns[:30])
+        )
+    return df.loc[:, feature_columns].astype("float32")
+
+
+def apply_frozen_median_scaled_feature_block(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    feature_columns: list[str],
+    imputer: SimpleImputer,
+    scaler: StandardScaler,
+    use_scaled_clipping: bool,
+    clip_min: float,
+    clip_max: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Transform splits with train-fitted median imputer and StandardScaler."""
+    X_train_raw = raw_float_feature_matrix_unfilled(train_df, feature_columns)
+    X_valid_raw = raw_float_feature_matrix_unfilled(valid_df, feature_columns)
+    X_test_raw = raw_float_feature_matrix_unfilled(test_df, feature_columns)
+
+    X_train_imputed = imputer.transform(X_train_raw).astype("float32")
+    X_valid_imputed = imputer.transform(X_valid_raw).astype("float32")
+    X_test_imputed = imputer.transform(X_test_raw).astype("float32")
+
+    X_train = scaler.transform(X_train_imputed).astype("float32")
+    X_valid = scaler.transform(X_valid_imputed).astype("float32")
+    X_test = scaler.transform(X_test_imputed).astype("float32")
+
+    if use_scaled_clipping:
+        X_train = np.clip(X_train, clip_min, clip_max).astype("float32")
+        X_valid = np.clip(X_valid, clip_min, clip_max).astype("float32")
+        X_test = np.clip(X_test, clip_min, clip_max).astype("float32")
+
+    return X_train, X_valid, X_test
+
+
+def prepare_median_scaled_feature_block(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    feature_columns: list[str],
+    use_scaled_clipping: bool,
+    clip_min: float,
+    clip_max: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, SimpleImputer, StandardScaler]:
+    """Fit train-median imputer and StandardScaler on train only."""
+    X_train_raw = raw_float_feature_matrix_unfilled(train_df, feature_columns)
+    X_valid_raw = raw_float_feature_matrix_unfilled(valid_df, feature_columns)
+    X_test_raw = raw_float_feature_matrix_unfilled(test_df, feature_columns)
+
+    imputer = SimpleImputer(strategy="median")
+    X_train_imputed = imputer.fit_transform(X_train_raw).astype("float32")
+    X_valid_imputed = imputer.transform(X_valid_raw).astype("float32")
+    X_test_imputed = imputer.transform(X_test_raw).astype("float32")
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train_imputed).astype("float32")
+    X_valid = scaler.transform(X_valid_imputed).astype("float32")
+    X_test = scaler.transform(X_test_imputed).astype("float32")
+
+    if use_scaled_clipping:
+        X_train = np.clip(X_train, clip_min, clip_max).astype("float32")
+        X_valid = np.clip(X_valid, clip_min, clip_max).astype("float32")
+        X_test = np.clip(X_test, clip_min, clip_max).astype("float32")
+
+    return X_train, X_valid, X_test, imputer, scaler
+
+
 def prepare_scaled_feature_block(
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
@@ -135,6 +216,83 @@ def build_dense_autoencoder(
         loss="mse",
     )
     return autoencoder, encoder
+
+
+def build_task_aware_autoencoder(
+    input_dim: int,
+    latent_dim: int,
+    learning_rate: float,
+    lambda_classification: float,
+    positive_class_weight: float,
+    input_name: str = "selected_numerical_features",
+    model_name: str = "task_aware_autoencoder",
+    encoder_name: str = "task_aware_encoder",
+    classification_head_name: str = "task_aware_classification_head",
+):
+    """Build joint reconstruction-classification Autoencoder (TAE01)."""
+    if input_dim <= 0:
+        raise ValueError("input_dim must be positive.")
+    if latent_dim <= 0:
+        raise ValueError("latent_dim must be positive.")
+    if lambda_classification <= 0:
+        raise ValueError("lambda_classification must be positive.")
+    if positive_class_weight <= 0:
+        raise ValueError("positive_class_weight must be positive.")
+
+    import tensorflow as tf
+    from tensorflow import keras
+
+    def weighted_binary_crossentropy(y_true, y_pred):
+        y_true = tf.cast(y_true, tf.float32)
+        y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
+        positive_loss = positive_class_weight * y_true * tf.math.log(y_pred)
+        negative_loss = (1.0 - y_true) * tf.math.log(1.0 - y_pred)
+        return -tf.reduce_mean(positive_loss + negative_loss)
+
+    inputs = keras.Input(shape=(input_dim,), name=input_name)
+    x = keras.layers.Dense(256, activation="relu", name="encoder_dense_256")(inputs)
+    x = keras.layers.Dense(128, activation="relu", name="encoder_dense_128")(x)
+    latent = keras.layers.Dense(latent_dim, activation="relu", name="latent")(x)
+
+    decoder_x = keras.layers.Dense(128, activation="relu", name="decoder_dense_128")(latent)
+    decoder_x = keras.layers.Dense(256, activation="relu", name="decoder_dense_256")(decoder_x)
+    reconstruction = keras.layers.Dense(
+        input_dim,
+        activation="linear",
+        name="reconstruction",
+    )(decoder_x)
+
+    classifier_x = keras.layers.Dense(64, activation="relu", name="classifier_dense_64")(latent)
+    classifier_x = keras.layers.Dropout(0.2, name="classifier_dropout_02")(classifier_x)
+    fraud_probability = keras.layers.Dense(
+        1,
+        activation="sigmoid",
+        name="fraud_probability",
+    )(classifier_x)
+
+    autoencoder = keras.Model(
+        inputs=inputs,
+        outputs=[reconstruction, fraud_probability],
+        name=model_name,
+    )
+    encoder = keras.Model(inputs=inputs, outputs=latent, name=encoder_name)
+    classification_head = keras.Model(
+        inputs=inputs,
+        outputs=fraud_probability,
+        name=classification_head_name,
+    )
+    autoencoder.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
+        loss={
+            "reconstruction": "mse",
+            "fraud_probability": weighted_binary_crossentropy,
+        },
+        loss_weights={
+            "reconstruction": 1.0,
+            "fraud_probability": float(lambda_classification),
+        },
+    )
+    return autoencoder, encoder, classification_head
 
 
 def reconstruction_errors(model, X: np.ndarray, batch_size: int) -> np.ndarray:
