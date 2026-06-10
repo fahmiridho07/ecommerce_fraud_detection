@@ -27,6 +27,8 @@ from autoencoder_helpers import (
 from causal_behavioral_features import causal_behavioral_feature_names
 from config import (
     BEHAVIORAL_CDV_AUTOENCODER_LD128_OUTPUT_DIR,
+    CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR,
+    CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR,
     CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR,
     DATA_DIR,
     ID_COL,
@@ -55,6 +57,7 @@ from train_baseline_lgbm import (
 )
 from train_causal_behavioral_lgbm import (
     prepare_causal_behavioral_splits,
+    save_alignment_artifacts,
     save_selected_feature_importance,
     train_model,
     validate_final_feature_alignment,
@@ -63,6 +66,7 @@ from utils import log, save_json, set_seed
 
 
 RECONSTRUCTION_ERROR_FEATURE = "cdv_ae_reconstruction_mse"
+ID_ALIGNED_MODEL_ID = "CBA02R"
 
 
 def load_json(path: Path) -> dict[str, object]:
@@ -123,6 +127,61 @@ def add_cdv_reconstruction_error_feature(
         [X.reset_index(drop=True), error_df.reset_index(drop=True)],
         axis=1,
     )
+
+
+def load_id_aligned_cdv_errors(
+    audit_dir: Path,
+    split_df: pd.DataFrame,
+    split_name: str,
+) -> np.ndarray:
+    path = audit_dir / f"cdv_reconstruction_error_{split_name}.csv"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Missing identity-aware CDV reconstruction error file: {path}"
+        )
+    frame = pd.read_csv(path)
+    if ID_COL not in frame.columns:
+        raise KeyError(f"{path} is missing {ID_COL}.")
+    if RECONSTRUCTION_ERROR_FEATURE not in frame.columns:
+        raise KeyError(f"{path} is missing {RECONSTRUCTION_ERROR_FEATURE}.")
+    if frame[ID_COL].duplicated().any():
+        raise ValueError(f"{path} contains duplicate {ID_COL} values.")
+    expected_ids = split_df[ID_COL].tolist()
+    indexed = frame.set_index(ID_COL)
+    missing_ids = [value for value in expected_ids if value not in indexed.index]
+    if missing_ids:
+        raise ValueError(
+            f"{split_name} CDV errors missing TransactionID value(s): "
+            + ", ".join(str(value) for value in missing_ids[:20])
+        )
+    values = indexed.loc[expected_ids, RECONSTRUCTION_ERROR_FEATURE].to_numpy(
+        dtype="float32"
+    )
+    if not np.isfinite(values).all():
+        raise ValueError(f"{split_name} CDV reconstruction errors are non-finite.")
+    if np.any(values < 0):
+        raise ValueError(f"{split_name} CDV reconstruction errors are negative.")
+    return values
+
+
+def assert_b3_matches_b2_except_cdv_error(
+    X_train_b2: pd.DataFrame,
+    X_valid_b2: pd.DataFrame,
+    X_test_b2: pd.DataFrame,
+    X_train_b3: pd.DataFrame,
+    X_valid_b3: pd.DataFrame,
+    X_test_b3: pd.DataFrame,
+) -> None:
+    for split_name, b2_frame, b3_frame in (
+        ("train", X_train_b2, X_train_b3),
+        ("validation", X_valid_b2, X_valid_b3),
+        ("test", X_test_b2, X_test_b3),
+    ):
+        b3_without_error = b3_frame.drop(columns=[RECONSTRUCTION_ERROR_FEATURE])
+        if not b2_frame.equals(b3_without_error):
+            raise ValueError(
+                f"{split_name}: B3 matrix without CDV error does not match B2."
+            )
 
 
 def validate_b3_feature_alignment(
@@ -209,6 +268,8 @@ def run_experiment(
     ae_output_dir: Path,
     output_dir: Path,
     overwrite: bool,
+    id_aligned: bool = False,
+    cdv_error_audit_dir: Path | None = None,
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     output_dir = prepare_output_dir(output_dir, overwrite=overwrite)
@@ -251,14 +312,35 @@ def run_experiment(
         behavioral_feature_count,
     )
 
-    log("Loading behavioral CDV AE reconstruction errors.")
-    reconstruction_errors = load_reconstruction_errors(ae_output_dir)
-    validate_reconstruction_error_lengths(
-        reconstruction_errors,
-        len(prepared["train_df"]),
-        len(prepared["valid_df"]),
-        len(prepared["test_df"]),
-    )
+    if id_aligned:
+        audit_dir = Path(cdv_error_audit_dir or CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR)
+        log("Loading identity-aware CDV reconstruction errors by TransactionID.")
+        reconstruction_errors = {
+            "train": load_id_aligned_cdv_errors(
+                audit_dir,
+                prepared["train_df"],
+                "train",
+            ),
+            "validation": load_id_aligned_cdv_errors(
+                audit_dir,
+                prepared["valid_df"],
+                "validation",
+            ),
+            "test": load_id_aligned_cdv_errors(
+                audit_dir,
+                prepared["test_df"],
+                "test",
+            ),
+        }
+    else:
+        log("Loading behavioral CDV AE reconstruction errors.")
+        reconstruction_errors = load_reconstruction_errors(ae_output_dir)
+        validate_reconstruction_error_lengths(
+            reconstruction_errors,
+            len(prepared["train_df"]),
+            len(prepared["valid_df"]),
+            len(prepared["test_df"]),
+        )
 
     log("Appending exactly one CDV reconstruction-error feature to B2 matrices.")
     X_train = add_cdv_reconstruction_error_feature(
@@ -281,6 +363,22 @@ def run_experiment(
         X_valid,
         X_test,
     )
+    if id_aligned:
+        assert_b3_matches_b2_except_cdv_error(
+            X_train_b2,
+            X_valid_b2,
+            X_test_b2,
+            X_train,
+            X_valid,
+            X_test,
+        )
+        save_alignment_artifacts(
+            output_dir,
+            prepared["train_df"],
+            prepared["valid_df"],
+            prepared["test_df"],
+            prepared["alignment_validation"],
+        )
 
     categorical_columns = preprocessing["categorical_columns"]
     model, model_params, best_iteration = train_model(
@@ -388,9 +486,15 @@ def run_experiment(
             output_dir / "feature_definition.json",
         )
 
+    model_id = ID_ALIGNED_MODEL_ID if id_aligned else "B3"
+    phase_name = (
+        "causal_behavioral_cdv_reconstruction_lgbm_id_aligned"
+        if id_aligned
+        else "causal_behavioral_cdv_reconstruction_lgbm_default"
+    )
     run_config = {
-        "phase": "causal_behavioral_cdv_reconstruction_lgbm_default",
-        "model_id": "B3",
+        "phase": phase_name,
+        "model_id": model_id,
         "data_dir": str(DATA_DIR),
         "output_dir": str(output_dir),
         "sample_size": SAMPLE_SIZE,
@@ -463,6 +567,19 @@ def run_experiment(
         "model_features_count": int(X_train.shape[1]),
         "source_ae_validation": source_ae_validation,
     }
+    if id_aligned:
+        run_config.update(
+            {
+                "correction_type": "transaction_id_alignment",
+                "supersedes_experiment": "CBA02",
+                "source_corrected_behavioral_model": "CBA01R",
+                "source_output_preserved": True,
+                "frozen_split_membership_preserved": True,
+                "positional_join_used": False,
+                "reconstruction_error_join_key": ID_COL,
+                "alignment_validation": prepared["alignment_validation"],
+            }
+        )
     save_json(run_config, output_dir / "run_config.json")
 
     print()
@@ -505,15 +622,34 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Allow replacing a non-empty output directory.",
     )
+    parser.add_argument(
+        "--id-aligned",
+        action="store_true",
+        help="Run corrected CBA02R with TransactionID-keyed CDV error join.",
+    )
+    parser.add_argument(
+        "--cdv-error-audit-dir",
+        type=Path,
+        default=CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR,
+        help="Directory containing identity-aware CDV reconstruction error CSVs.",
+    )
     return parser.parse_args()
 
 
 def main() -> dict[str, object]:
     args = parse_args()
+    output_dir = args.output_dir
+    if (
+        args.id_aligned
+        and args.output_dir == CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR
+    ):
+        output_dir = CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR
     return run_experiment(
         ae_output_dir=args.ae_output_dir,
-        output_dir=args.output_dir,
+        output_dir=output_dir,
         overwrite=args.overwrite,
+        id_aligned=args.id_aligned,
+        cdv_error_audit_dir=args.cdv_error_audit_dir,
     )
 
 

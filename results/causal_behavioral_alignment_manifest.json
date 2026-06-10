@@ -1,0 +1,36 @@
+{
+  "comparison_csv": "C:\\Users\\Lenovo\\Documents\\1_TugasAkhir\\ecommerce_fraud_detection\\outputs\\final_comparison\\causal_behavioral_alignment_correction.csv",
+  "models": [
+    {
+      "model_id": "P01",
+      "result_status": "original_reference",
+      "test_average_precision": 0.48575636611508805,
+      "validation_average_precision": 0.6024330226974878
+    },
+    {
+      "model_id": "CBA01",
+      "result_status": "provisional_alignment_risk",
+      "test_average_precision": 0.49535037166352414,
+      "validation_average_precision": 0.6137378455711773
+    },
+    {
+      "model_id": "CBA01R",
+      "result_status": "corrected_authoritative",
+      "test_average_precision": 0.4938379650483288,
+      "validation_average_precision": 0.6151223584166937
+    },
+    {
+      "model_id": "CBA02",
+      "result_status": "provisional_alignment_risk",
+      "test_average_precision": 0.4846148344150921,
+      "validation_average_precision": 0.6006588005447071
+    },
+    {
+      "model_id": "CBA02R",
+      "result_status": "corrected_authoritative",
+      "test_average_precision": 0.4838312377852223,
+      "validation_average_precision": 0.6006073826532767
+    }
+  ],
+  "tracked_summary_csv": "C:\\Users\\Lenovo\\Documents\\1_TugasAkhir\\ecommerce_fraud_detection\\results\\causal_behavioral_alignment_correction.csv"
+}

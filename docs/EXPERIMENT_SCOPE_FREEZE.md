@@ -144,35 +144,37 @@ AAE01 is an **anchor-alignment Autoencoder diagnostic**, not a primary thesis mo
 
 AAE02 is the **final permitted anchor-alignment diagnostic**. No further AE branches are authorized.
 
-## Resolved causal behavioral question (CBA01 — executed 2026-06-10)
+## Resolved causal behavioral question (CBA01R — corrected authoritative 2026-06-10)
 
-**Question:** Do leakage-safe causal behavioral features improve chronological validation AP versus P01?
+**Question:** Do identity-aligned causal behavioral features improve chronological validation AP versus P01?
 
-**Experiment:** `outputs/causal_behavioral_lgbm_default/` (`src/train_causal_behavioral_lgbm.py`, `src/causal_behavioral_features.py`)
+**Experiment:** `outputs/causal_behavioral_lgbm_id_aligned/` (`src/train_causal_behavioral_lgbm.py --id-aligned`, `src/causal_behavioral_features.py`)
 
-| Model | Validation AP | Delta vs P01 |
-|-------|---------------|--------------|
-| P01 baseline default | 0.602433 | — |
-| **B2 causal behavioral** | **0.613738** | **+0.011305** |
+| Model | Validation AP | Delta vs P01 | Status |
+|-------|---------------|--------------|--------|
+| P01 baseline default | 0.602433 | — | original reference |
+| CBA01 B2 (legacy) | 0.613738 | +0.011305 | provisional / superseded |
+| **CBA01R B2 corrected** | **0.615122** | **+0.012689** | **corrected authoritative** |
 
-**Conclusion (Rule A):** Causal behavioral features improve LightGBM under the executed chronological protocol. Evidence: `outputs/final_comparison/causal_behavioral_ae_comparison.csv`, `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`.
+**Conclusion (Rule A):** Identity-aligned causal behavioral features improve LightGBM under the executed chronological protocol. Evidence: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`, `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`.
 
-CBA01 is a **literature-motivated controlled diagnostic**, not an automatic replacement for primary thesis models P01–P04.
+CBA01 remains archived as **provisional** due to 16,309 within-split TransactionID mismatches under the legacy generator. CBA01R is the authoritative B2 result.
 
-## Resolved CDV-after-behavioral question (CBA02 — executed 2026-06-10)
+## Resolved CDV-after-behavioral question (CBA02R — corrected authoritative 2026-06-10)
 
-**Question:** Does CDV reconstruction error add complementary validation AP after causal behavioral features are included?
+**Question:** Does ID-aligned CDV reconstruction error add complementary validation AP after corrected causal behavioral features?
 
-**Experiment:** `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` (`src/train_causal_behavioral_cdv_reconstruction_lgbm.py`)
+**Experiment:** `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/` (`src/train_causal_behavioral_cdv_reconstruction_lgbm.py --id-aligned`)
 
-| Model | Validation AP | Delta vs B2 |
-|-------|---------------|-------------|
-| B2 causal behavioral | 0.613738 | — |
-| **B3 B2 + CDV recon** | **0.600659** | **−0.013079** |
+| Model | Validation AP | Delta vs CBA01R | Status |
+|-------|---------------|-----------------|--------|
+| CBA01R corrected B2 | 0.615122 | — | corrected authoritative |
+| CBA02 B3 (legacy) | 0.600659 | −0.013079 vs provisional B2 | provisional / superseded |
+| **CBA02R B3 corrected** | **0.600607** | **−0.014515** | **corrected authoritative** |
 
-**Conclusion (Rule D):** CDV reconstruction error does **not** provide additional validation benefit beyond causal behavioral features. Frozen CDV AE reused; no retraining.
+**Conclusion (Rule D):** ID-aligned CDV reconstruction error does **not** provide additional validation benefit beyond corrected causal behavioral features. Frozen CDV AE reused; no retraining.
 
-CBA02 is the **final permitted causal behavioral experiment family**. No further entity/window/AE-signal branches are authorized.
+CBA02 is archived as provisional. CBA02R is the authoritative B3 result. **Late fusion remains blocked** pending supervisor approval.
 
 ## Resolved task-aware AE question (TAE01 — executed 2026-06-10)
 

@@ -132,9 +132,22 @@ CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR = (
 CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR = (
     OUTPUT_DIR / "causal_behavioral_lgbm_default"
 )
+CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_lgbm_id_aligned"
+)
 CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR = (
     OUTPUT_DIR / "causal_behavioral_cdv_reconstruction_lgbm_default"
 )
+CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_cdv_reconstruction_lgbm_id_aligned"
+)
+CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_alignment_audit"
+)
+CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_alignment_correction.csv"
+)
+RESULTS_DIR = PROJECT_ROOT / "results"
 CAUSAL_BEHAVIORAL_AE_COMPARISON_FILE = (
     FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_ae_comparison.csv"
 )
@@ -248,8 +261,13 @@ OUTPUT_PATHS = {
     "fe_cdv_reconstruction_error_lgbm": FE_CDV_RECON_ERROR_LGBM_OUTPUT_DIR,
     "causal_behavioral_feature_audit": CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR,
     "causal_behavioral_lgbm_default": CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR,
+    "causal_behavioral_lgbm_id_aligned": CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR,
     "causal_behavioral_cdv_reconstruction_lgbm_default": (
         CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR
     ),
+    "causal_behavioral_cdv_reconstruction_lgbm_id_aligned": (
+        CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR
+    ),
+    "causal_behavioral_alignment_audit": CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR,
     "split_strategy_appendix": SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR,
 }

@@ -12,6 +12,7 @@ data/interim/*
 
 # Dataset / large tabular files
 *.csv
+!results/causal_behavioral_alignment_correction.csv
 *.parquet
 *.feather
 *.h5
@@ -19,6 +20,7 @@ data/interim/*
 *.xlsx
 *.xls
 *.jsonl
+!results/causal_behavioral_alignment_manifest.json
 
 
 # =========================================================

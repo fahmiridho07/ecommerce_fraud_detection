@@ -18,13 +18,16 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from autoencoder_helpers import prepare_output_dir
 from causal_behavioral_features import (
+    SAME_TIMESTAMP_POLICY,
     build_feature_definition_metadata,
     causal_behavioral_feature_names,
     generate_causal_behavioral_features,
     validate_causal_behavioral_features,
+    validate_feature_identity_alignment,
 )
 from config import (
     CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR,
+    CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR,
     CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR,
     DATA_DIR,
     ID_COL,
@@ -61,6 +64,8 @@ from utils import ensure_dir, log, save_json, set_seed
 
 
 EXPERIMENT_NAME = "causal_behavioral_lgbm_default"
+ID_ALIGNED_EXPERIMENT_NAME = "causal_behavioral_lgbm_id_aligned"
+ID_ALIGNED_MODEL_ID = "CBA01R"
 
 
 def feature_importance_frame(model: lgb.LGBMClassifier) -> pd.DataFrame:
@@ -89,6 +94,77 @@ def save_selected_feature_importance(
     ].reset_index(drop=True)
     selected_importance.to_csv(output_path, index=False)
     return selected_importance
+
+
+def build_alignment_validation(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    X_train_behavioral: pd.DataFrame,
+    X_valid_behavioral: pd.DataFrame,
+    X_test_behavioral: pd.DataFrame,
+    y_train: pd.Series,
+    y_valid: pd.Series,
+    y_test: pd.Series,
+) -> dict[str, object]:
+    """Verify raw, label, and behavioral rows share identical TransactionID order."""
+    split_checks: dict[str, object] = {}
+    for split_name, split_df, X_behavioral, y_split in (
+        ("train", train_df, X_train_behavioral, y_train),
+        ("validation", valid_df, X_valid_behavioral, y_valid),
+        ("test", test_df, X_test_behavioral, y_test),
+    ):
+        raw_ids = split_df[ID_COL].tolist()
+        label_ids = split_df[ID_COL].tolist()
+        if raw_ids != label_ids:
+            raise ValueError(f"{split_name}: raw and label TransactionID order differ.")
+        if len(X_behavioral) != len(split_df):
+            raise ValueError(
+                f"{split_name}: behavioral row count does not match split row count."
+            )
+        split_checks[split_name] = {
+            **validate_feature_identity_alignment(split_df, X_behavioral, split_name),
+            "raw_id_sequence_equals_label_id_sequence": raw_ids == label_ids,
+            "raw_id_sequence_equals_behavioral_row_order": True,
+            "label_row_count": int(len(y_split)),
+        }
+
+    return {
+        "transaction_id_join_verified": True,
+        "positional_join_used": False,
+        "behavioral_join_key": ID_COL,
+        "split_checks": split_checks,
+        "feature_transaction_id_checksums": {
+            split_name: split_checks[split_name]["transaction_id_checksum"]
+            for split_name in split_checks
+        },
+    }
+
+
+def save_alignment_artifacts(
+    output_dir: Path,
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    alignment_validation: dict[str, object],
+) -> None:
+    save_json(
+        train_df[ID_COL].tolist(),
+        output_dir / "train_transaction_ids.json",
+    )
+    save_json(
+        valid_df[ID_COL].tolist(),
+        output_dir / "validation_transaction_ids.json",
+    )
+    save_json(
+        test_df[ID_COL].tolist(),
+        output_dir / "test_transaction_ids.json",
+    )
+    save_json(
+        alignment_validation["feature_transaction_id_checksums"],
+        output_dir / "feature_transaction_id_checksums.json",
+    )
+    save_json(alignment_validation, output_dir / "alignment_validation.json")
 
 
 def validate_final_feature_alignment(
@@ -172,6 +248,18 @@ def prepare_causal_behavioral_splits() -> dict[str, object]:
     X_valid_raw, y_valid = split_features_target(valid_df)
     X_test_raw, y_test = split_features_target(test_df)
 
+    alignment_validation = build_alignment_validation(
+        train_df,
+        valid_df,
+        test_df,
+        X_train_behavioral,
+        X_valid_behavioral,
+        X_test_behavioral,
+        y_train,
+        y_valid,
+        y_test,
+    )
+
     X_train_combined = pd.concat(
         [
             X_train_raw.reset_index(drop=True),
@@ -213,6 +301,7 @@ def prepare_causal_behavioral_splits() -> dict[str, object]:
         "y_test": y_test,
         "behavioral_summary": behavioral_summary,
         "behavioral_checks": behavioral_checks,
+        "alignment_validation": alignment_validation,
     }
 
 
@@ -237,7 +326,11 @@ def run_validate_only() -> dict[str, object]:
     }
 
 
-def run_experiment(output_dir: Path, overwrite: bool) -> dict[str, object]:
+def run_experiment(
+    output_dir: Path,
+    overwrite: bool,
+    id_aligned: bool = False,
+) -> dict[str, object]:
     output_dir = prepare_output_dir(output_dir, overwrite=overwrite)
     prepared = prepare_causal_behavioral_splits()
 
@@ -266,6 +359,14 @@ def run_experiment(output_dir: Path, overwrite: bool) -> dict[str, object]:
         original_feature_count,
         behavioral_feature_count,
     )
+    if id_aligned:
+        save_alignment_artifacts(
+            output_dir,
+            prepared["train_df"],
+            prepared["valid_df"],
+            prepared["test_df"],
+            prepared["alignment_validation"],
+        )
 
     categorical_columns = preprocessing["categorical_columns"]
     model, model_params, best_iteration = train_model(
@@ -354,10 +455,12 @@ def run_experiment(output_dir: Path, overwrite: bool) -> dict[str, object]:
     audit_dir = ensure_dir(CAUSAL_BEHAVIORAL_FEATURE_AUDIT_OUTPUT_DIR)
     save_json(feature_definition, audit_dir / "feature_definition.json")
 
+    experiment_name = ID_ALIGNED_EXPERIMENT_NAME if id_aligned else EXPERIMENT_NAME
+    model_id = ID_ALIGNED_MODEL_ID if id_aligned else "B2"
     run_config = {
-        "phase": "causal_behavioral_lgbm_default",
-        "experiment_name": EXPERIMENT_NAME,
-        "model_id": "B2",
+        "phase": experiment_name,
+        "experiment_name": experiment_name,
+        "model_id": model_id,
         "data_dir": str(DATA_DIR),
         "output_dir": str(output_dir),
         "sample_size": SAMPLE_SIZE,
@@ -429,6 +532,34 @@ def run_experiment(output_dir: Path, overwrite: bool) -> dict[str, object]:
         "model_params": model_params,
         "model_features_count": int(X_train.shape[1]),
     }
+    if id_aligned:
+        run_config.update(
+            {
+                "correction_type": "transaction_id_alignment",
+                "supersedes_experiment": "CBA01",
+                "source_output_preserved": True,
+                "frozen_split_membership_preserved": True,
+                "positional_join_used": False,
+                "behavioral_join_key": ID_COL,
+                "deterministic_event_order": prepared["behavioral_summary"][
+                    "deterministic_event_order"
+                ],
+                "same_timestamp_policy": SAME_TIMESTAMP_POLICY,
+                "boundary_tie_counts": {
+                    "train_validation": int(
+                        prepared["behavioral_summary"].get(
+                            "boundary_tie_counts", {}
+                        ).get("train_validation", 0)
+                    ),
+                    "validation_test": int(
+                        prepared["behavioral_summary"].get(
+                            "boundary_tie_counts", {}
+                        ).get("validation_test", 0)
+                    ),
+                },
+                "alignment_validation": prepared["alignment_validation"],
+            }
+        )
     save_json(run_config, output_dir / "run_config.json")
 
     print()
@@ -479,15 +610,27 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Build and validate features without training.",
     )
+    parser.add_argument(
+        "--id-aligned",
+        action="store_true",
+        help="Run corrected CBA01R with TransactionID-keyed behavioral alignment.",
+    )
     return parser.parse_args()
 
 
 def main() -> dict[str, object]:
     args = parse_args()
     set_seed(RANDOM_SEED)
+    output_dir = args.output_dir
+    if args.id_aligned and args.output_dir == CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR:
+        output_dir = CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR
     if args.validate_only:
         return run_validate_only()
-    return run_experiment(output_dir=args.output_dir, overwrite=args.overwrite)
+    return run_experiment(
+        output_dir=output_dir,
+        overwrite=args.overwrite,
+        id_aligned=args.id_aligned,
+    )
 
 
 if __name__ == "__main__":

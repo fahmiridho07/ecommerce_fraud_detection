@@ -91,7 +91,7 @@ B2 requires original P01 predictors plus **past-only** behavioral aggregates. B3
 | fraud-rate / target encoding | Not found in FE or velocity scripts | **None detected** |
 | rolling windows without shift | `historical_velocity_features.py` | Windows exclude current row via prior-state write — **safe** |
 | expanding statistics without shift | `historical_velocity_features.py` | Expanding stats use state before row update — **safe** |
-| sorting misalignment | `chronological_split` sorts by `TransactionDT` only | B2 re-sorts by `TransactionDT`, `TransactionID` for feature generation |
+| sorting misalignment | `chronological_split` sorts by `TransactionDT` only | Legacy B2 globally re-sorted then sliced by row count — **corrected in CBA01R** via per-split processing and `TransactionID` restoration |
 | category mappings fit outside train | `fit_baseline_preprocessing` | Categorical maps train-only — acceptable for original features |
 
 ## Final feature policy
@@ -149,11 +149,15 @@ All `count_*`, `freq_*`, `amt_*_by_*`, `nunique_*` from `feature_engineering.py`
 
 **Decision:** Implement corrected B2 and B3. Reuse P01 metrics for B1. Reuse CDV AE artifacts from `outputs/behavioral_cdv_ae_experiment/autoencoder_cdv_ld128/` without retraining.
 
-## State continuation policy (B2/B3)
+## State continuation policy (B2/B3 — corrected CBA01R/CBA02R)
 
-1. Sort all rows by `TransactionDT`, then `TransactionID`.
-2. Process train rows sequentially; update entity state after each row.
-3. Continue state into validation (train history visible).
-4. Continue state into test (train + validation history visible).
-5. Labels never update state.
-6. No future rows used.
+1. Preserve frozen split membership from `chronological_split()`.
+2. Process train, then validation, then test sequentially.
+3. Within each split, sort a working copy by `TransactionDT`, then `TransactionID`.
+4. Compute features in that deterministic event order; continue entity state across splits.
+5. Restore generated values to each split's exact input `TransactionID` order before joining raw features or labels.
+6. Labels never update state. No future rows used.
+
+Each feature uses only transactions preceding the current row in the deterministic event order defined by split precedence, `TransactionDT`, and `TransactionID`.
+
+Audit evidence: `outputs/causal_behavioral_alignment_audit/pre_fix_alignment_report.json` (16,309 legacy within-split mismatches; 0 membership changes). See `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`.

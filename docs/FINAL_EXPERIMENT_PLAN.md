@@ -155,20 +155,24 @@ The allowed unresolved Autoencoder questions have been **executed and closed**:
 
 **No further experiments** are permitted without explicit supervisor approval. The anchor-alignment experimental phase is closed.
 
-## Final permitted experiment family — causal behavioral + AE signal (executed 2026-06-10)
+## Final permitted experiment family — causal behavioral + AE signal (corrected 2026-06-10)
 
 | Experiment | Output | Validation AP | Delta vs P01 | Status |
 |------------|--------|---------------|--------------|--------|
-| B2 causal behavioral LightGBM | `outputs/causal_behavioral_lgbm_default/` | 0.613738 | +0.011305 | Complete |
-| B3 causal behavioral + CDV recon | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` | 0.600659 | −0.001774 | Complete |
+| B2 causal behavioral LightGBM (legacy) | `outputs/causal_behavioral_lgbm_default/` | 0.613738 | +0.011305 | Provisional / superseded |
+| **B2 corrected CBA01R** | `outputs/causal_behavioral_lgbm_id_aligned/` | **0.615122** | **+0.012689** | **Corrected authoritative** |
+| B3 causal behavioral + CDV recon (legacy) | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` | 0.600659 | −0.001774 | Provisional / superseded |
+| **B3 corrected CBA02R** | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/` | **0.600607** | −0.001826 | **Corrected authoritative** |
 
-**B2 result (Rule A):** Causal behavioral features improve validation AP versus P01 under chronological evaluation.
+**Alignment correction:** Legacy B2/B3 used global re-sort + positional joins. Audit confirmed 16,309 within-split TransactionID mismatches (0 membership changes). CBA01R/CBA02R restore features by `TransactionID`.
 
-**B3 result (Rule D):** CDV reconstruction error does not improve validation AP beyond causal behavioral features (−0.013079 vs B2).
+**CBA01R result (Rule A):** Identity-aligned causal behavioral features improve validation AP versus P01.
 
-Comparison: `outputs/final_comparison/causal_behavioral_ae_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`.
+**CBA02R result (Rule D):** ID-aligned CDV reconstruction error does not improve validation AP beyond CBA01R (−0.014515).
 
-**The experimental phase is closed.** No further entity expansions, AE signals, tuning, or ensemble branches.
+Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`.
+
+**Late fusion remains blocked** pending supervisor approval. No further entity expansions, AE signals, tuning, or ensemble branches without approval.
 
 ## Final permitted AE integration experiment — task-aware latent learning (executed 2026-06-10)
 
@@ -212,4 +216,4 @@ Current paths remain authoritative until a governed migration is approved and do
 
 ## Immediate next step
 
-**Write final thesis diagnostic text for AE17, AAE01, AAE02, CBA01/CBA02, and TAE01 using validation AP only. The experimental phase is closed. TAE01 is the final permitted AE integration experiment.**
+**Write final thesis diagnostic text using CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain provisional archives. Late fusion blocked pending supervisor approval.**

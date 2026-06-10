@@ -84,14 +84,19 @@ Recommend a **minimal** set of small, thesis-relevant artifacts that may later b
 | `outputs/selected_numerical_reconstructed_lgbm/metrics_test_selected_threshold.json` | AAE02 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
 | `outputs/final_comparison/autoencoder_output_strategy_comparison.csv` | P01 vs latent vs reconstructed comparison | ~1 KB | **Yes** | Ding-alignment evidence |
 | `outputs/causal_behavioral_feature_audit/feature_definition.json` | CBA causal behavioral feature policy | ~3 KB | **Yes** | Documents entity keys, windows, causal policy |
-| `outputs/causal_behavioral_lgbm_default/run_config.json` | B2 causal behavioral protocol | ~4 KB | **Yes** | B2 feature construction proof |
-| `outputs/causal_behavioral_lgbm_default/metrics_validation_selected_threshold.json` | B2 validation AP | 0.4 KB | **Yes** | Primary CBA01 metric |
-| `outputs/causal_behavioral_lgbm_default/metrics_test_selected_threshold.json` | B2 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
-| `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/run_config.json` | B3 protocol (`only_added_feature`) | ~4 KB | **Yes** | B3 isolation proof |
-| `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/metrics_validation_selected_threshold.json` | B3 validation AP | 0.4 KB | **Yes** | Primary CBA02 metric |
-| `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/metrics_test_selected_threshold.json` | B3 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
-| `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/source_ae_validation.json` | CDV AE reuse validation | small | **Yes** | `autoencoder_retrained: false` proof |
-| `outputs/final_comparison/causal_behavioral_ae_comparison.csv` | B1/B2/B3 controlled comparison | ~1 KB | **Yes** | CBA evidence |
+| `outputs/causal_behavioral_lgbm_default/run_config.json` | B2 legacy protocol | ~4 KB | **Optional** | Provisional archive only |
+| `outputs/causal_behavioral_lgbm_default/metrics_validation_selected_threshold.json` | B2 legacy validation AP | 0.4 KB | **Optional** | Superseded by CBA01R |
+| `outputs/causal_behavioral_lgbm_id_aligned/run_config.json` | CBA01R corrected protocol | ~5 KB | **Yes** | Identity-safe B2 proof |
+| `outputs/causal_behavioral_lgbm_id_aligned/alignment_validation.json` | CBA01R ID join validation | small | **Yes** | TransactionID alignment evidence |
+| `outputs/causal_behavioral_lgbm_id_aligned/metrics_validation_selected_threshold.json` | CBA01R validation AP | 0.4 KB | **Yes** | **Authoritative CBA01R metric** |
+| `outputs/causal_behavioral_lgbm_id_aligned/metrics_test_selected_threshold.json` | CBA01R test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
+| `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/run_config.json` | CBA02R corrected protocol | ~5 KB | **Yes** | Identity-safe B3 proof |
+| `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/metrics_validation_selected_threshold.json` | CBA02R validation AP | 0.4 KB | **Yes** | **Authoritative CBA02R metric** |
+| `outputs/causal_behavioral_alignment_audit/pre_fix_alignment_report.json` | Alignment risk audit | ~15 KB | **Yes** | Documents 16,309 legacy mismatches |
+| `outputs/final_comparison/causal_behavioral_alignment_correction.csv` | Corrected CBA comparison | ~1 KB | **Yes** | Authoritative CBA evidence |
+| `results/causal_behavioral_alignment_correction.csv` | Trackable summary CSV | ~1 KB | **Yes** | Git-tracked mirror of comparison |
+| `results/causal_behavioral_alignment_manifest.json` | Trackable result manifest | small | **Yes** | Git-tracked summary metadata |
+| `outputs/final_comparison/causal_behavioral_ae_comparison.csv` | Legacy B1/B2/B3 comparison | ~1 KB | **Optional** | Historical archive only |
 | `outputs/task_aware_autoencoder_selected_numerical_ld128/selected/run_config.json` | TAE01 AE protocol record | ~4 KB | **Yes** | Joint-loss architecture and lambda-selection policy |
 | `outputs/task_aware_autoencoder_selected_numerical_ld128/model_selection_summary.csv` | TAE01 lambda ablation summary | ~1 KB | **Yes** | Validation-only downstream AP selection |
 | `outputs/task_aware_ae_lgbm_ld128/selected/run_config.json` | TAE01 replacement protocol | ~4 KB | **Yes** | Feature construction proof |

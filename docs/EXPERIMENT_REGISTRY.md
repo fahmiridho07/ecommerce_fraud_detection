@@ -59,8 +59,10 @@ The registry supports documentation-first experiment governance. It does not mod
 | AE13 | Reconstruction error only — normal-only log1p | AE diagnostic | Yes | Yes | No | Config-only | `src/train_reconstruction_error_lgbm.py` | `RECON_ERROR_LGBM_NORMAL_ONLY_LOG1P_OUTPUT_DIR` | `outputs/baseline_lgbm_plus_log1p_normal_only_ae_reconstruction_mse/` | Not found locally |
 | AE14 | Reconstruction error only — normal-only raw+log1p | AE diagnostic | Yes | Yes | No | Config-only | `src/train_reconstruction_error_lgbm.py` | `RECON_ERROR_LGBM_NORMAL_ONLY_RAW_LOG1P_OUTPUT_DIR` | `outputs/baseline_lgbm_plus_raw_log1p_normal_only_ae_reconstruction_mse/` | Not found locally |
 | AE15 | Behavioral/CDV Autoencoder + FE recon LGBM | AE diagnostic | Yes | Yes | Yes | Complete | `src/train_behavioral_cdv_autoencoder.py`, `src/train_fe_cdv_reconstruction_error_lgbm.py`, `src/compare_behavioral_cdv_ae_experiment.py` | `BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR` | `outputs/behavioral_cdv_ae_experiment/` | `comparison.csv`, `autoencoder_cdv_ld128/run_config.json`, `A_fe_lgbm_cdv_reconstruction_mse_default/metrics_*` |
-| CBA01 | Causal behavioral LightGBM default (B2) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/causal_behavioral_features.py`, `src/train_causal_behavioral_lgbm.py` | `CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR` | `outputs/causal_behavioral_lgbm_default/` | `run_config.json`, `metrics_*_selected_threshold.json`, `behavioral_feature_importance.csv`, `feature_definition.json` |
-| CBA02 | Causal behavioral + CDV recon error (B3) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/train_causal_behavioral_cdv_reconstruction_lgbm.py` | `CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR` | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` | `run_config.json`, `metrics_*_selected_threshold.json`, `cdv_feature_importance.csv`, `source_ae_validation.json` |
+| CBA01 | Causal behavioral LightGBM default (B2) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete (provisional — alignment risk) | `src/causal_behavioral_features.py`, `src/train_causal_behavioral_lgbm.py` | `CAUSAL_BEHAVIORAL_LGBM_OUTPUT_DIR` | `outputs/causal_behavioral_lgbm_default/` | `run_config.json`, `metrics_*_selected_threshold.json`, `behavioral_feature_importance.csv`, `feature_definition.json` |
+| CBA01R | Causal behavioral LightGBM ID-aligned (B2 corrected) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/causal_behavioral_features.py`, `src/train_causal_behavioral_lgbm.py --id-aligned` | `CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR` | `outputs/causal_behavioral_lgbm_id_aligned/` | `run_config.json`, `alignment_validation.json`, `metrics_*_selected_threshold.json`, `train_transaction_ids.json` |
+| CBA02 | Causal behavioral + CDV recon error (B3) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete (provisional — alignment risk) | `src/train_causal_behavioral_cdv_reconstruction_lgbm.py` | `CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR` | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` | `run_config.json`, `metrics_*_selected_threshold.json`, `cdv_feature_importance.csv`, `source_ae_validation.json` |
+| CBA02R | Causal behavioral + CDV recon ID-aligned (B3 corrected) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/train_causal_behavioral_cdv_reconstruction_lgbm.py --id-aligned` | `CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR` | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/` | `run_config.json`, `alignment_validation.json`, `metrics_*_selected_threshold.json` |
 | AE16 | Legacy non-robust Autoencoder LD32 | AE diagnostic | Yes | Yes | Yes | Complete (superseded) | `src/train_autoencoder.py` | `AUTOENCODER_OUTPUT_DIR` | `outputs/autoencoder/` | `run_config.json`, `reconstruction_metrics.json` |
 | MD01 | Split appendix — baseline chronological holdout | Methodological | Yes | Yes | Yes | Complete | `src/compare_split_strategy_appendix.py` | `SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR` | `outputs/split_strategy_appendix/holdout/baseline_lgbm/chronological/` | `run_config.json`, `metrics_test_selected_threshold.json`, `split_summary.json` |
 | MD02 | Split appendix — baseline stratified holdout | Methodological | Yes | Yes | Yes | Complete | `src/compare_split_strategy_appendix.py` | same | `outputs/split_strategy_appendix/holdout/baseline_lgbm/stratified_holdout/` | `run_config.json`, `metrics_test_selected_threshold.json` |
@@ -120,8 +122,10 @@ The registry supports documentation-first experiment governance. It does not mod
 | AE09 | Does log1p transform change recon-error utility? | Baseline + log1p recon MSE | AE08 | V-features | All-class robust LD128 | 128 (AE only) | Yes | Yes (log1p) | 0.612429 | 0.496067 | `outputs/baseline_lgbm_plus_log1p_ae_reconstruction_mse/metrics_*_selected_threshold.json` | Identical validation/test AP to AE08 in saved artifacts | High |
 | AE12 | Does normal-only AE recon error differ from all-class? | Baseline + normal-only raw recon | AE08 | V-features | Normal-only | 128 (AE only) | Yes | Yes (raw) | 0.609163 | 0.487441 | `outputs/baseline_lgbm_plus_normal_only_ae_reconstruction_mse/metrics_*_selected_threshold.json` | Normal-only AE recon did not outperform all-class recon on test AP | High |
 | AE15 | Do behavioral/CDV AE features help under FE? | FE-LGBM + CDV recon error | EX01 | CDV behavioral subset | CDV AE | 128 | Yes (FE + originals) | Yes | 0.635954 | 0.511667 | `outputs/behavioral_cdv_ae_experiment/A_fe_lgbm_cdv_reconstruction_mse_default/metrics_*`, `comparison.csv` | Weak additive signal under FE; not a replacement for main AE thesis pipeline | Medium |
-| CBA01 | Do causal behavioral features improve P01? | Causal behavioral B2 | P01 | Original + 19 causal behavioral | — | — | Yes | No | 0.613738 | 0.495350 | `outputs/causal_behavioral_lgbm_default/metrics_*_selected_threshold.json` | Validation AP +0.011305 vs P01; Rule A | High |
-| CBA02 | Does CDV recon error help after causal behavioral context? | B2 + CDV recon B3 | CBA01 | B2 + `cdv_ae_reconstruction_mse` | CDV AE (frozen) | 128 (AE only) | Yes | Yes (one feature) | 0.600659 | 0.484615 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/metrics_*` | Validation AP −0.013079 vs B2; Rule D; high recon gain but no AP gain | High |
+| CBA01 | Do causal behavioral features improve P01? | Causal behavioral B2 | P01 | Original + 19 causal behavioral | — | — | Yes | No | 0.613738 | 0.495350 | `outputs/causal_behavioral_lgbm_default/metrics_*_selected_threshold.json` | **Provisional** — superseded by CBA01R due to alignment risk | Medium |
+| CBA01R | Do identity-aligned causal behavioral features improve P01? | Causal behavioral B2 corrected | P01 | Original + 19 causal behavioral (ID-restored) | — | — | Yes | No | **0.615122** | 0.493838 | `outputs/causal_behavioral_lgbm_id_aligned/metrics_*_selected_threshold.json` | Validation AP +0.012689 vs P01; Rule A | High |
+| CBA02 | Does CDV recon error help after causal behavioral context? | B2 + CDV recon B3 | CBA01 | B2 + `cdv_ae_reconstruction_mse` | CDV AE (frozen) | 128 (AE only) | Yes | Yes (one feature) | 0.600659 | 0.484615 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/metrics_*` | **Provisional** — superseded by CBA02R | Medium |
+| CBA02R | Does ID-aligned CDV recon error help after corrected B2? | CBA01R + CDV recon | CBA01R | B2 corrected + `cdv_ae_reconstruction_mse` | CDV AE (frozen) | 128 (AE only) | Yes | Yes (one feature) | **0.600607** | 0.483831 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/metrics_*` | Validation AP −0.014515 vs CBA01R; Rule D | High |
 | AE16 | Is robust AE necessary? | Legacy non-robust AE | AE01 | V-features | Legacy | 32 | — | — | Not available | Not available | `outputs/autoencoder/run_config.json`, `reconstruction_metrics.json` | Superseded by robust AE; no downstream LGBM replacement artifact tied to legacy AE in main path | Low |
 
 Aggregated ablation evidence: `outputs/final_comparison/latent_dim_ablation.csv`, `outputs/final_comparison/ae_augmented_comparison.csv`, `outputs/final_comparison/optuna_comparison.csv`.
@@ -309,7 +313,7 @@ AE06 remains **confounded** (V + latent + recon). AE17 is the fair latent-only a
 ### Requires rerun (if strict governance adopted)
 
 - AE-LightGBM **LD32 tuned** (`outputs/optuna/ae_lgbm/`) for P04 parity
-- Optional: latent-only augmentation without recon error (not executed)
+- AE17 clean latent-only augmentation is **executed** (`outputs/ae_latent_only_augmented_lgbm_ld128/`)
 
 ### Integration strategy comparison (AE17)
 
@@ -332,19 +336,23 @@ Multiple exploratory branches (`outputs/final_comparison/next_controlled_experim
 
 **Freeze policy:** see `docs/EXPERIMENT_SCOPE_FREEZE.md`. Validation AP determines configuration; test AP is reported once for the frozen comparison set.
 
-### Causal behavioral + AE-signal experiment (CBA01/CBA02 — executed 2026-06-10)
+### Causal behavioral + AE-signal experiment (CBA01/CBA02 — provisional; CBA01R/CBA02R — corrected 2026-06-10)
 
 | Criterion | Status |
 |-----------|--------|
 | B1 P01 baseline reused | **Yes** — `outputs/baseline_lgbm/` |
-| B2 causal behavioral implemented | **Yes** — `outputs/causal_behavioral_lgbm_default/` |
-| B3 B2 + one CDV recon error | **Yes** — `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` |
-| CDV AE retrained | **No** — reused `outputs/behavioral_cdv_ae_experiment/autoencoder_cdv_ld128/` |
-| B2 validation AP | 0.613738 (+0.011305 vs P01) |
-| B3 validation AP | 0.600659 (−0.013079 vs B2) |
-| Interpretation | Rule A (B1 vs B2); Rule D (B2 vs B3) |
+| B2 causal behavioral implemented | **Yes** — `outputs/causal_behavioral_lgbm_default/` (**provisional**) |
+| B2 corrected ID-aligned | **Yes** — `outputs/causal_behavioral_lgbm_id_aligned/` (**authoritative**) |
+| B3 B2 + one CDV recon error | **Yes** — `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` (**provisional**) |
+| B3 corrected ID-aligned | **Yes** — `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/` (**authoritative**) |
+| Alignment audit | **Yes** — 16,309 pre-fix within-split mismatches; 0 membership changes |
+| CDV AE retrained | **No** — reused frozen `outputs/behavioral_cdv_ae_experiment/autoencoder_cdv_ld128/` |
+| CBA01R validation AP | **0.615122** (+0.012689 vs P01) |
+| CBA02R validation AP | **0.600607** (−0.014515 vs CBA01R) |
+| Interpretation | Rule A (P01 vs CBA01R); Rule D (CBA01R vs CBA02R) |
+| Late fusion | **Blocked** pending supervisor approval |
 
-Comparison: `outputs/final_comparison/causal_behavioral_ae_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`, `docs/CAUSAL_BEHAVIORAL_FEATURE_AUDIT.md`.
+Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`, `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`.
 
 ### Task-aware Autoencoder experiment (TAE01 — executed 2026-06-10)
 
@@ -366,4 +374,4 @@ Comparison: `outputs/final_comparison/task_aware_ae_comparison.csv`, `outputs/fi
 
 ## Immediate next step
 
-**Incorporate TAE01 results into the thesis diagnostic chapter using validation AP only. The experimental phase is closed; TAE01 is the final permitted AE integration experiment. No further branches without supervisor approval.**
+**Use CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain archived as provisional. Late fusion remains blocked pending supervisor approval.**

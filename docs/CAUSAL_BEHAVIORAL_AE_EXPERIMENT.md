@@ -14,7 +14,7 @@ This experiment implements a **leakage-safe tabular approximation** of that idea
 ## Leakage-safe design
 
 - **Chronological ordering:** 60/20/20 split by `TransactionDT` (unchanged from P01).
-- **Past-only statistics:** Each row uses only transactions strictly before the current row.
+- **Past-only statistics:** Each row uses only transactions preceding the current row in deterministic event order (split precedence, `TransactionDT`, `TransactionID`).
 - **State continuation:** Train history flows into validation; train + validation history flows into test (online inference simulation).
 - **No target history:** `isFraud` never updates behavioral state.
 - **No future rows:** Later transactions cannot alter earlier feature values (verified by synthetic immutability test).
@@ -38,13 +38,15 @@ B3 reuses frozen CDV Autoencoder artifacts from `outputs/behavioral_cdv_ae_exper
 
 ### Validation AP (primary interpretation)
 
-| Model | Validation AP | Delta vs B1 | Delta vs B2 |
-|-------|---------------|-------------|-------------|
-| B1 | 0.602433 | — | — |
-| B2 | **0.613738** | **+0.011305** | — |
-| B3 | 0.600659 | −0.001774 | **−0.013079** |
+| Model | Status | Validation AP | Delta vs B1 | Delta vs corrected B2 |
+|-------|--------|---------------|-------------|------------------------|
+| B1 (P01) | original reference | 0.602433 | — | — |
+| B2 (CBA01) | provisional / superseded | 0.613738 | +0.011305 | — |
+| **B2 corrected (CBA01R)** | **corrected authoritative** | **0.615122** | **+0.012689** | — |
+| B3 (CBA02) | provisional / superseded | 0.600659 | −0.001774 | −0.013079 vs provisional B2 |
+| **B3 corrected (CBA02R)** | **corrected authoritative** | **0.600607** | −0.001826 | **−0.014515 vs CBA01R** |
 
-Evidence: `outputs/final_comparison/causal_behavioral_ae_comparison.csv`
+Evidence: `outputs/final_comparison/causal_behavioral_alignment_correction.csv` (authoritative); `outputs/final_comparison/causal_behavioral_ae_comparison.csv` (legacy archive)
 
 ### Descriptive test AP (not used for model selection)
 
@@ -64,17 +66,17 @@ In B3, `cdv_ae_reconstruction_mse` ranks **#1 by gain** despite lower validation
 
 ## Interpretation
 
-### B1 vs B2 (Rule A)
+### B1 vs B2 corrected (Rule A)
 
-**B2 validation AP (0.613738) > B1 validation AP (0.602433).**
+**CBA01R validation AP (0.615122) > B1 validation AP (0.602433).**
 
-**Conclusion:** Causal behavioral features improve LightGBM under chronological validation in the executed configuration (+0.011305 validation AP).
+**Conclusion:** Identity-aligned causal behavioral features improve chronological validation AP (+0.012689). Legacy CBA01 (+0.011305) is provisional.
 
-### B2 vs B3 (Rule D)
+### B2 corrected vs B3 corrected (Rule D)
 
-**B3 validation AP (0.600659) ≤ B2 validation AP (0.613738).**
+**CBA02R validation AP (0.600607) < CBA01R validation AP (0.615122).**
 
-**Conclusion:** CDV reconstruction error does **not** provide additional validation benefit beyond causal behavioral features (−0.013079 validation AP).
+**Conclusion:** ID-aligned CDV reconstruction error does **not** provide additional validation benefit beyond corrected causal behavioral features (−0.014515 validation AP).
 
 ## Historical reference (not directly comparable)
 
@@ -96,9 +98,13 @@ These rows are included in the comparison CSV for context only.
 - Tabular entity history approximates relational modeling; this is not a graph model.
 - B2 reached max boosting rounds (1999) without early stopping; B3 stopped at iteration 982.
 
+## Alignment correction note
+
+Legacy B2/B3 used global concat/re-sort and positional joins. Audit confirmed 16,309 within-split TransactionID mismatches with 0 split-membership changes. CBA01R/CBA02R correct this via `TransactionID`-keyed restoration. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`.
+
 ## Stopping rule
 
-After this comparison: no additional entities, windows, AE signals, tuning, stacking, GNNs, or Autoencoder architecture changes. The causal behavioral experiment phase is **closed** regardless of outcome.
+Causal behavioral experiment family is closed at CBA02R. Late fusion remains **blocked** pending supervisor approval. No additional entities, windows, AE signals, tuning, stacking, GNNs, or Autoencoder architecture changes without approval.
 
 ## Artifacts
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from bisect import bisect_left
 from dataclasses import dataclass, field
 import math
@@ -43,6 +44,26 @@ WINDOW_FEATURE_SUFFIXES = [
     "count_in_previous_24_hours",
 ]
 
+DETERMINISTIC_EVENT_ORDER_POLICY = (
+    "Process train split first, validation second, test third. Within each split, "
+    "order events by TransactionDT ascending then TransactionID ascending. "
+    "Entity state continues from completed train into validation and from "
+    "train+validation into test."
+)
+
+CAUSAL_POLICY_WORDING = (
+    "Each feature uses only transactions preceding the current row in the "
+    "deterministic event order defined by split precedence, TransactionDT, "
+    "and TransactionID."
+)
+
+SAME_TIMESTAMP_POLICY = (
+    "Within the same split, equal TransactionDT values are ordered by ascending "
+    "TransactionID; lower TransactionID is treated as the prior event. Across "
+    "split boundaries, split precedence is authoritative: train, then validation, "
+    "then test."
+)
+
 
 @dataclass
 class EntityState:
@@ -70,7 +91,8 @@ def build_feature_definition_metadata() -> dict[str, Any]:
     """Build JSON-safe feature metadata for audit artifacts."""
     formulas = {
         "cb_transaction_count_before_{entity}": (
-            "Number of prior transactions for entity key strictly before current row."
+            "Number of prior transactions for entity key before the current row "
+            "in deterministic event order."
         ),
         "cb_time_since_previous_transaction_{entity}": (
             "TransactionDT delta from most recent prior entity transaction; "
@@ -101,18 +123,26 @@ def build_feature_definition_metadata() -> dict[str, Any]:
         "window_entity_groups": sorted(WINDOW_ENTITY_GROUPS),
         "windows_seconds": WINDOWS_SECONDS,
         "calculation_formulas": formulas,
-        "causal_policy": (
-            "Each row uses only transactions strictly before the current row ordered by "
-            "TransactionDT then TransactionID."
-        ),
+        "causal_policy": CAUSAL_POLICY_WORDING,
+        "deterministic_event_order": DETERMINISTIC_EVENT_ORDER_POLICY,
+        "same_timestamp_policy": SAME_TIMESTAMP_POLICY,
         "state_transition_policy": (
-            "Online state updates after each row during a single chronological pass over "
-            "train, then validation, then test."
+            "Online state updates after each row during sequential processing of "
+            "train, then validation, then test. Validation and test labels never "
+            "update state."
         ),
-        "tie_breaking_policy": (
-            "Rows with equal TransactionDT are ordered by ascending TransactionID; "
-            "lower TransactionID rows are visible to higher TransactionID rows at the "
-            "same timestamp."
+        "tie_breaking_policy": SAME_TIMESTAMP_POLICY,
+        "transactiondt_resolution_note": (
+            "TransactionDT has coarse resolution; multiple rows may share a timestamp."
+        ),
+        "transactionid_tie_break_note": (
+            "TransactionID tie-breaking within a split is an approximation of true "
+            "event order."
+        ),
+        "split_boundary_note": (
+            "Frozen chronological split membership is preserved at timestamp "
+            "boundaries; split precedence overrides TransactionID ordering across "
+            "boundaries."
         ),
         "target_not_used": True,
         "future_rows_not_used": True,
@@ -120,39 +150,95 @@ def build_feature_definition_metadata() -> dict[str, Any]:
     }
 
 
-def generate_causal_behavioral_features(
+def transaction_id_checksum(transaction_ids: list[int] | pd.Series) -> str:
+    """Return a stable checksum for an ordered TransactionID sequence."""
+    if isinstance(transaction_ids, pd.Series):
+        transaction_ids = transaction_ids.tolist()
+    payload = ",".join(str(value) for value in transaction_ids)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _validate_split_identity(
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, Any]]:
-    """Create causal behavioral features with state continuation across splits."""
-    _validate_split_inputs(train_df, valid_df, test_df)
-    split_lengths = {
-        "train": len(train_df),
-        "validation": len(valid_df),
-        "test": len(test_df),
+) -> None:
+    for split_name, split_df in (
+        ("train", train_df),
+        ("validation", valid_df),
+        ("test", test_df),
+    ):
+        if split_df[ID_COL].duplicated().any():
+            duplicate_count = int(split_df[ID_COL].duplicated().sum())
+            raise ValueError(
+                f"Duplicate {ID_COL} values found in {split_name}: {duplicate_count}"
+            )
+
+    train_ids = set(train_df[ID_COL])
+    valid_ids = set(valid_df[ID_COL])
+    test_ids = set(test_df[ID_COL])
+    if train_ids & valid_ids:
+        raise ValueError(f"{ID_COL} overlap found between train and validation splits.")
+    if train_ids & test_ids:
+        raise ValueError(f"{ID_COL} overlap found between train and test splits.")
+    if valid_ids & test_ids:
+        raise ValueError(f"{ID_COL} overlap found between validation and test splits.")
+
+
+def _assert_restored_identity(
+    split_df: pd.DataFrame,
+    X_split_behavioral: pd.DataFrame,
+    original_id_order: list[int],
+    split_name: str,
+) -> None:
+    if len(X_split_behavioral) != len(split_df):
+        raise ValueError(
+            f"{split_name}: behavioral row count {len(X_split_behavioral)} does not "
+            f"match split row count {len(split_df)}."
+        )
+    if X_split_behavioral.columns.tolist() != causal_behavioral_feature_names():
+        raise ValueError(f"{split_name}: behavioral feature columns do not match spec.")
+
+    input_ids = split_df[ID_COL].tolist()
+    if input_ids != original_id_order:
+        raise ValueError(
+            f"{split_name}: input split ID order changed during processing."
+        )
+
+
+def validate_feature_identity_alignment(
+    split_df: pd.DataFrame,
+    X_behavioral: pd.DataFrame,
+    split_name: str,
+) -> dict[str, object]:
+    """Assert one-to-one TransactionID alignment between split rows and features."""
+    _validate_split_inputs(split_df, split_df, split_df)
+    original_id_order = split_df[ID_COL].tolist()
+    _assert_restored_identity(split_df, X_behavioral, original_id_order, split_name)
+    return {
+        "split_name": split_name,
+        "row_count": int(len(split_df)),
+        "feature_count": int(X_behavioral.shape[1]),
+        "transaction_id_checksum": transaction_id_checksum(original_id_order),
+        "duplicate_ids": False,
+        "missing_ids": False,
+        "unexpected_ids": False,
+        "restored_order_matches_input": True,
     }
 
-    all_df = pd.concat(
-        [
-            train_df.reset_index(drop=True),
-            valid_df.reset_index(drop=True),
-            test_df.reset_index(drop=True),
-        ],
-        axis=0,
-        ignore_index=True,
-    )
-    all_df = all_df.sort_values(
-        [TIME_COL, ID_COL],
-        ascending=[True, True],
-        kind="mergesort",
-    ).reset_index(drop=True)
 
-    time_values = pd.to_numeric(all_df[TIME_COL], errors="coerce").to_numpy(
+def _compute_features_for_sorted_split(
+    sorted_df: pd.DataFrame,
+    states: dict[str, dict[str, EntityState]],
+    feature_names: list[str],
+) -> pd.DataFrame:
+    """Compute causal features for one split in deterministic event order."""
+    n_rows = len(sorted_df)
+    time_values = pd.to_numeric(sorted_df[TIME_COL], errors="coerce").to_numpy(
         dtype="float64",
         copy=False,
     )
-    amount_values = pd.to_numeric(all_df[AMOUNT_COL], errors="coerce").to_numpy(
+    amount_values = pd.to_numeric(sorted_df[AMOUNT_COL], errors="coerce").to_numpy(
         dtype="float64",
         copy=False,
     )
@@ -160,14 +246,12 @@ def generate_causal_behavioral_features(
         raise ValueError(f"{TIME_COL} contains missing or non-numeric values.")
 
     keys_by_entity = {
-        entity: build_combo_key(all_df, columns).to_numpy()
+        entity: build_combo_key(sorted_df, columns).to_numpy()
         for entity, columns in CAUSAL_ENTITY_GROUPS.items()
     }
-    feature_names = causal_behavioral_feature_names()
-    feature_arrays = _initialize_feature_arrays(len(all_df), feature_names)
-    states = {entity: {} for entity in CAUSAL_ENTITY_GROUPS}
+    feature_arrays = _initialize_feature_arrays(n_rows, feature_names)
 
-    for row_index in range(len(all_df)):
+    for row_index in range(n_rows):
         current_time = time_values[row_index]
         current_amount = amount_values[row_index]
         for entity in CAUSAL_ENTITY_GROUPS:
@@ -187,23 +271,143 @@ def generate_causal_behavioral_features(
                 current_amount=current_amount,
             )
 
-    features_all = pd.DataFrame(feature_arrays, columns=feature_names)
-    train_end = split_lengths["train"]
-    valid_end = train_end + split_lengths["validation"]
-    X_train_cb = features_all.iloc[:train_end].reset_index(drop=True)
-    X_valid_cb = features_all.iloc[train_end:valid_end].reset_index(drop=True)
-    X_test_cb = features_all.iloc[valid_end:].reset_index(drop=True)
+    generated = pd.DataFrame(feature_arrays, columns=feature_names)
+    generated[ID_COL] = sorted_df[ID_COL].to_numpy()
+    return generated
+
+
+def restore_behavioral_features_to_input_order(
+    split_df: pd.DataFrame,
+    generated_frame: pd.DataFrame,
+    feature_names: list[str],
+) -> pd.DataFrame:
+    """Restore generated behavioral features to the split's original row order."""
+    behavioral_by_id = generated_frame.set_index(ID_COL)
+    original_id_order = split_df[ID_COL].tolist()
+    missing_ids = [value for value in original_id_order if value not in behavioral_by_id.index]
+    if missing_ids:
+        raise ValueError(
+            "Generated behavioral features are missing TransactionID value(s): "
+            + ", ".join(str(value) for value in missing_ids[:20])
+        )
+    unexpected_ids = sorted(set(behavioral_by_id.index) - set(original_id_order))
+    if unexpected_ids:
+        raise ValueError(
+            "Generated behavioral features contain unexpected TransactionID value(s): "
+            + ", ".join(str(value) for value in unexpected_ids[:20])
+        )
+
+    restored = (
+        behavioral_by_id.loc[original_id_order, feature_names]
+        .reset_index(drop=True)
+    )
+    _assert_restored_identity(split_df, restored, original_id_order, "split")
+    return restored
+
+
+def generate_causal_behavioral_features(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Create identity-safe causal behavioral features with split state continuation."""
+    _validate_split_inputs(train_df, valid_df, test_df)
+    _validate_split_identity(train_df, valid_df, test_df)
+
+    feature_names = causal_behavioral_feature_names()
+    states = {entity: {} for entity in CAUSAL_ENTITY_GROUPS}
+    split_outputs: dict[str, pd.DataFrame] = {}
+    id_manifests: dict[str, dict[str, object]] = {}
+
+    for split_name, split_df in (
+        ("train", train_df),
+        ("validation", valid_df),
+        ("test", test_df),
+    ):
+        original_id_order = split_df[ID_COL].tolist()
+        working_df = split_df.sort_values(
+            [TIME_COL, ID_COL],
+            ascending=[True, True],
+            kind="mergesort",
+        ).reset_index(drop=True)
+        generated_frame = _compute_features_for_sorted_split(
+            working_df,
+            states,
+            feature_names,
+        )
+        X_split_behavioral = restore_behavioral_features_to_input_order(
+            split_df,
+            generated_frame,
+            feature_names,
+        )
+        split_outputs[split_name] = X_split_behavioral
+        id_manifests[split_name] = validate_feature_identity_alignment(
+            split_df,
+            X_split_behavioral,
+            split_name,
+        )
 
     duplicate_timestamp_rows = int(
-        pd.Series(time_values).duplicated(keep=False).sum()
+        pd.concat(
+            [train_df[[TIME_COL]], valid_df[[TIME_COL]], test_df[[TIME_COL]]],
+            ignore_index=True,
+        )[TIME_COL].duplicated(keep=False).sum()
     )
     summary = {
         **build_feature_definition_metadata(),
+        "identity_safe_generation": True,
+        "positional_slice_recovery_used": False,
+        "global_concat_resort_used": False,
+        "restoration_key": ID_COL,
         "duplicate_timestamp_rows": duplicate_timestamp_rows,
-        "split_row_counts": split_lengths,
-        "sort_columns": [TIME_COL, ID_COL],
+        "split_row_counts": {
+            "train": len(train_df),
+            "validation": len(valid_df),
+            "test": len(test_df),
+        },
+        "transaction_id_manifests": id_manifests,
+        "sort_columns_within_split": [TIME_COL, ID_COL],
     }
-    return X_train_cb, X_valid_cb, X_test_cb, summary
+    return (
+        split_outputs["train"],
+        split_outputs["validation"],
+        split_outputs["test"],
+        summary,
+    )
+
+
+def reproduce_legacy_positional_feature_slices(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+) -> tuple[list[int], list[int], list[int]]:
+    """Reproduce the pre-fix global concat/sort/row-count slice TransactionID order."""
+    split_lengths = {
+        "train": len(train_df),
+        "validation": len(valid_df),
+        "test": len(test_df),
+    }
+    all_df = pd.concat(
+        [
+            train_df.reset_index(drop=True),
+            valid_df.reset_index(drop=True),
+            test_df.reset_index(drop=True),
+        ],
+        axis=0,
+        ignore_index=True,
+    )
+    all_df = all_df.sort_values(
+        [TIME_COL, ID_COL],
+        ascending=[True, True],
+        kind="mergesort",
+    ).reset_index(drop=True)
+
+    train_end = split_lengths["train"]
+    valid_end = train_end + split_lengths["validation"]
+    legacy_train_ids = all_df.iloc[:train_end][ID_COL].tolist()
+    legacy_valid_ids = all_df.iloc[train_end:valid_end][ID_COL].tolist()
+    legacy_test_ids = all_df.iloc[valid_end:][ID_COL].tolist()
+    return legacy_train_ids, legacy_valid_ids, legacy_test_ids
 
 
 def validate_causal_behavioral_features(
@@ -358,28 +562,21 @@ def run_future_immutability_check() -> dict[str, object]:
         ],
         ignore_index=True,
     )
-    extended_train = extended_train.sort_values(
-        [TIME_COL, ID_COL],
-        ascending=[True, True],
-        kind="mergesort",
-    ).reset_index(drop=True)
 
     rerun_train, _, _, _ = generate_causal_behavioral_features(
         extended_train,
         valid,
         test,
     )
-    common_ids = [100, 200]
-    baseline_subset = baseline_train.loc[
-        baseline_train.index.isin([0, 1])
-    ].reset_index(drop=True)
-    rerun_subset = rerun_train.loc[
-        rerun_train.index < 2
-    ].reset_index(drop=True)
-    if not baseline_subset.equals(rerun_subset):
+    original_train_ids = train[ID_COL].tolist()
+    if not baseline_train.equals(rerun_train.loc[: len(train) - 1].reset_index(drop=True)):
         raise ValueError(
             "Fixture failed: inserting a future train row changed earlier features."
         )
+    if rerun_train.shape[0] != len(extended_train):
+        raise ValueError("Fixture failed: extended train row count mismatch.")
+    if extended_train[ID_COL].tolist()[: len(train)] != original_train_ids:
+        raise ValueError("Fixture failed: original train ID order changed.")
     return {"future_rows_do_not_change_past_features": True}
 
 
