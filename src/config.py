@@ -76,6 +76,26 @@ FE_AE_AUGMENTED_LGBM_OUTPUT_DIR = (
     FE_AE_CONTROLLED_OUTPUT_DIR / "C_fe_lgbm_latent128_reconstruction_mse_default"
 )
 FE_AE_CONTROLLED_COMPARISON_FILE = FE_AE_CONTROLLED_OUTPUT_DIR / "comparison.csv"
+BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR = (
+    OUTPUT_DIR / "behavioral_cdv_ae_experiment"
+)
+BEHAVIORAL_CDV_AUTOENCODER_LD128_OUTPUT_DIR = (
+    BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR / "autoencoder_cdv_ld128"
+)
+FE_CDV_RECON_ERROR_LGBM_OUTPUT_DIR = (
+    BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR
+    / "A_fe_lgbm_cdv_reconstruction_mse_default"
+)
+BEHAVIORAL_CDV_AE_COMPARISON_FILE = (
+    BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR / "comparison.csv"
+)
+SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR = OUTPUT_DIR / "split_strategy_appendix"
+SPLIT_STRATEGY_APPENDIX_COMPARISON_FILE = (
+    SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR / "split_strategy_comparison.csv"
+)
+SPLIT_STRATEGY_APPENDIX_CV_FILE = (
+    SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR / "stratified_cv_summary.csv"
+)
 
 RANDOM_SEED = 42
 
@@ -150,4 +170,10 @@ OUTPUT_PATHS = {
     "fe_ae_score_ensemble": FE_AE_SCORE_ENSEMBLE_OUTPUT_DIR,
     "fe_reconstruction_error_lgbm": FE_RECON_ERROR_LGBM_OUTPUT_DIR,
     "fe_ae_augmented_lgbm": FE_AE_AUGMENTED_LGBM_OUTPUT_DIR,
+    "behavioral_cdv_ae_experiment": BEHAVIORAL_CDV_AE_EXPERIMENT_OUTPUT_DIR,
+    "behavioral_cdv_autoencoder_ld128": (
+        BEHAVIORAL_CDV_AUTOENCODER_LD128_OUTPUT_DIR
+    ),
+    "fe_cdv_reconstruction_error_lgbm": FE_CDV_RECON_ERROR_LGBM_OUTPUT_DIR,
+    "split_strategy_appendix": SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR,
 }

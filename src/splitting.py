@@ -1,11 +1,13 @@
-"""Chronological splitting utilities."""
+"""Chronological and stratified splitting utilities."""
 
 from __future__ import annotations
 
 import pandas as pd
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from config import (
     ID_COL,
+    RANDOM_SEED,
     SAMPLE_SIZE,
     TARGET_COL,
     TEST_RATIO,
@@ -103,16 +105,132 @@ def _split_stats(df: pd.DataFrame, time_col: str = TIME_COL) -> dict[str, int | 
     }
 
 
-def build_split_summary(
+def validate_holdout_split_integrity(
     full_df: pd.DataFrame,
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
+    time_col: str = TIME_COL,
+) -> None:
+    """Validate row counts and TransactionID separation without temporal ordering."""
+    validate_labeled_data(full_df)
+    for name, split_df in (
+        ("train", train_df),
+        ("validation", valid_df),
+        ("test", test_df),
+    ):
+        validate_required_columns(split_df, [ID_COL, TARGET_COL, time_col], name)
+        if split_df.empty:
+            raise ValueError(f"{name} split is empty. Increase sample_size or use full data.")
+        if split_df[ID_COL].duplicated().any():
+            duplicate_count = int(split_df[ID_COL].duplicated().sum())
+            raise ValueError(f"Duplicate {ID_COL} values found in {name}: {duplicate_count}")
+
+    if len(train_df) + len(valid_df) + len(test_df) != len(full_df):
+        raise ValueError("Split row counts do not add up to the full dataset row count.")
+
+    train_ids = set(train_df[ID_COL])
+    valid_ids = set(valid_df[ID_COL])
+    test_ids = set(test_df[ID_COL])
+
+    if train_ids & valid_ids:
+        raise ValueError(f"{ID_COL} overlap found between train and validation splits.")
+    if train_ids & test_ids:
+        raise ValueError(f"{ID_COL} overlap found between train and test splits.")
+    if valid_ids & test_ids:
+        raise ValueError(f"{ID_COL} overlap found between validation and test splits.")
+
+
+def temporal_order_preserved(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    time_col: str = TIME_COL,
+) -> bool:
+    """Return True when train, validation, and test periods are strictly ordered."""
+    if train_df.empty or valid_df.empty or test_df.empty:
+        return False
+    return (
+        train_df[time_col].max() <= valid_df[time_col].min()
+        and valid_df[time_col].max() <= test_df[time_col].min()
+    )
+
+
+def stratified_holdout_split(
+    df: pd.DataFrame,
+    train_ratio: float = TRAIN_RATIO,
+    valid_ratio: float = VALID_RATIO,
+    test_ratio: float = TEST_RATIO,
+    target_col: str = TARGET_COL,
+    random_seed: int = RANDOM_SEED,
+    time_col: str = TIME_COL,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split data with stratified sampling while preserving global fraud rate."""
+    validate_labeled_data(df)
+    if round(train_ratio + valid_ratio + test_ratio, 10) != 1.0:
+        raise ValueError("train_ratio + valid_ratio + test_ratio must equal 1.0")
+
+    train_valid_df, test_df = train_test_split(
+        df,
+        test_size=test_ratio,
+        stratify=df[target_col],
+        random_state=random_seed,
+    )
+    valid_fraction = valid_ratio / (train_ratio + valid_ratio)
+    train_df, valid_df = train_test_split(
+        train_valid_df,
+        test_size=valid_fraction,
+        stratify=train_valid_df[target_col],
+        random_state=random_seed,
+    )
+
+    train_df = train_df.reset_index(drop=True).copy()
+    valid_df = valid_df.reset_index(drop=True).copy()
+    test_df = test_df.reset_index(drop=True).copy()
+    validate_holdout_split_integrity(df, train_df, valid_df, test_df, time_col=time_col)
+    return train_df, valid_df, test_df
+
+
+def stratified_kfold_splits(
+    df: pd.DataFrame,
+    n_splits: int = 5,
+    target_col: str = TARGET_COL,
+    random_seed: int = RANDOM_SEED,
+) -> StratifiedKFold:
+    """Return a configured StratifiedKFold splitter for labeled experiment data."""
+    validate_labeled_data(df)
+    if n_splits < 2:
+        raise ValueError("n_splits must be at least 2.")
+    if n_splits > len(df):
+        raise ValueError("n_splits cannot exceed the number of rows.")
+
+    labels = df[target_col].to_numpy()
+    class_counts = pd.Series(labels).value_counts()
+    if class_counts.min() < n_splits:
+        raise ValueError(
+            "Stratified K-fold requires at least n_splits rows per class. "
+            f"Smallest class count={int(class_counts.min())}, n_splits={n_splits}."
+        )
+
+    return StratifiedKFold(
+        n_splits=n_splits,
+        shuffle=True,
+        random_state=random_seed,
+    )
+
+
+def build_holdout_split_summary(
+    full_df: pd.DataFrame,
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    split_strategy: str,
     sample_size: int | None = SAMPLE_SIZE,
     time_col: str = TIME_COL,
+    random_seed: int | None = None,
 ) -> dict[str, object]:
-    """Create the Phase 1 split summary payload."""
-    validate_split_integrity(full_df, train_df, valid_df, test_df, time_col=time_col)
+    """Create a split summary for chronological or stratified holdout experiments."""
+    validate_holdout_split_integrity(full_df, train_df, valid_df, test_df, time_col=time_col)
 
     total_rows = int(len(full_df))
     total_fraud_count = int(full_df[TARGET_COL].sum())
@@ -121,6 +239,15 @@ def build_split_summary(
     test_stats = _split_stats(test_df, time_col=time_col)
 
     return {
+        "split_strategy": split_strategy,
+        "temporal_order_preserved": bool(
+            temporal_order_preserved(
+                train_df,
+                valid_df,
+                test_df,
+                time_col=time_col,
+            )
+        ),
         "full_dataset_shape": [int(full_df.shape[0]), int(full_df.shape[1])],
         "number_of_features": int(full_df.shape[1] - 1),
         "total_fraud_count": total_fraud_count,
@@ -142,6 +269,7 @@ def build_split_summary(
         "test_transactiondt_max": test_stats[f"{time_col}_max"],
         "sample_size": sample_size,
         "is_local_debugging_sample": sample_size is not None,
+        "random_seed": random_seed,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -153,6 +281,29 @@ def build_split_summary(
             "test": test_stats,
         },
     }
+
+
+def build_split_summary(
+    full_df: pd.DataFrame,
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    sample_size: int | None = SAMPLE_SIZE,
+    time_col: str = TIME_COL,
+) -> dict[str, object]:
+    """Create the Phase 1 chronological split summary payload."""
+    validate_split_integrity(full_df, train_df, valid_df, test_df, time_col=time_col)
+    summary = build_holdout_split_summary(
+        full_df,
+        train_df,
+        valid_df,
+        test_df,
+        split_strategy="chronological",
+        sample_size=sample_size,
+        time_col=time_col,
+    )
+    summary["temporal_order_preserved"] = True
+    return summary
 
 
 if __name__ == "__main__":
