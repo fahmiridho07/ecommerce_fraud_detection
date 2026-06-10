@@ -1,5 +1,13 @@
 # Final Experiment Plan
 
+## Canonical naming
+
+Use dual notation in thesis text: **BASE-01 / P01**, **AE-02 / P04**, **BEH-01 / CBA01R**, **FUS-01 / LF01**.
+
+**Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
+
+Registry: [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md). Active path: [`docs/ACTIVE_EXPERIMENT_MAP.md`](ACTIVE_EXPERIMENT_MAP.md).
+
 ## Main research question
 
 Evaluate whether Autoencoder-derived representation improves LightGBM fraud detection on the IEEE-CIS dataset under **chronological** evaluation using `TransactionDT`.
@@ -16,12 +24,12 @@ The thesis contribution question is about **integration design** (replacement, a
 
 ## Core model roles
 
-| Role ID | Definition | Verified mapping | Status |
-|---------|------------|------------------|--------|
-| **P1** | original-feature LightGBM default | `outputs/baseline_lgbm/` (script: `src/train_baseline_lgbm.py`) | **Complete** |
-| **P2** | original-feature LightGBM tuned | `outputs/optuna/baseline_lgbm/` (script: `src/tune_lgbm_optuna.py --model_type baseline_lgbm`) | **Complete** |
-| **P3** | AE-LightGBM latent replacement default | `outputs/ae_lgbm/` + `outputs/autoencoder_robust/` (scripts: `src/train_autoencoder_robust.py`, `src/train_ae_lgbm.py`) | **Complete** |
-| **P4** | AE-LightGBM latent replacement tuned | `outputs/optuna/ae_lgbm_ld128/` (script: `src/tune_lgbm_optuna.py --model_type ae_lgbm_ld128`) | **Partial — requires rerun** for strict thesis parity |
+| Canonical / Legacy ID | Definition | Verified mapping | Status |
+|-----------------------|------------|------------------|--------|
+| **BASE-01 / P01** | original-feature LightGBM default | `outputs/baseline_lgbm/` (script: `src/train_baseline_lgbm.py`) | **Complete** |
+| **BASE-02 / P02** | original-feature LightGBM tuned | `outputs/optuna/baseline_lgbm/` (script: `src/tune_lgbm_optuna.py --model_type baseline_lgbm`) | **Complete** |
+| **AE-01 / P03** | AE-LightGBM latent replacement default | `outputs/ae_lgbm/` + `outputs/autoencoder_robust/` (scripts: `src/train_autoencoder_robust.py`, `src/train_ae_lgbm.py`) | **Complete** |
+| **AE-02 / P04** | AE-LightGBM latent replacement tuned | `outputs/optuna/ae_lgbm_ld128/` (script: `src/tune_lgbm_optuna.py --model_type ae_lgbm_ld128`) | **Partial — requires rerun** for strict thesis parity |
 
 ### P4 gap (verified)
 
@@ -176,11 +184,11 @@ Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv
 
 ## Final permitted decision-level integration — causal behavioral + AE late fusion (executed 2026-06-10)
 
-| Experiment | Output | Validation AP | Delta vs CBA01R | Status |
-|------------|--------|---------------|-----------------|--------|
-| LF01 CBA01R + P04 late fusion | `outputs/causal_behavioral_ae_late_fusion/` | **0.629600** | **+0.014478** | Complete (freeze exception) |
+| Canonical / Legacy ID | Output | Validation AP | Delta vs BEH-01 / CBA01R | Status |
+|-----------------------|--------|---------------|--------------------------|--------|
+| **FUS-01 / LF01** BEH-01 + AE-02 late fusion | `outputs/causal_behavioral_ae_late_fusion/` | **0.629600** | **+0.014478** | Complete (freeze exception) |
 
-**LF01 result:** Validation-selected 50/50 convex fusion achieves predefined **strong success** versus CBA01R and P02. Comparison: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
+**FUS-01 / LF01 result:** Validation-selected 50/50 convex fusion achieves predefined **strong success** versus BEH-01 / CBA01R and BASE-02 / P02. Comparison: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
 
 ## Final permitted AE integration experiment — task-aware latent learning (executed 2026-06-10)
 
@@ -224,4 +232,4 @@ Current paths remain authoritative until a governed migration is approved and do
 
 ## Immediate next step
 
-**Write final thesis diagnostic text using CBA01R/CBA02R as authoritative causal behavioral evidence and LF01 as conditional thesis-candidate late fusion. CBA01/CBA02 remain provisional archives. Supervisor approval required before promoting LF01 to primary thesis model.**
+**Write final thesis diagnostic text using BEH-01 / CBA01R and BEH-02 / CBA02R as authoritative causal behavioral evidence and FUS-01 / LF01 as conditional thesis-candidate late fusion. LEGACY-01 / CBA01 and LEGACY-02 / CBA02 remain provisional archives. Supervisor approval required before promoting FUS-01 to primary thesis model.**

@@ -6,16 +6,24 @@ This document freezes which experiments belong in the thesis narrative, which ar
 
 **Effective policy:** validation AP on chronological splits determines model-design conclusions; test AP is reported once for the frozen comparison set.
 
+## Canonical naming
+
+Experiments are cited in dual notation where relevant: **BASE-01 / P01**, **BEH-01 / CBA01R**, **AE-02 / P04**, **FUS-01 / LF01**.
+
+**Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
+
+See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md), [`docs/ACTIVE_EXPERIMENT_MAP.md`](ACTIVE_EXPERIMENT_MAP.md), [`docs/ABLATION_EXPERIMENT_MAP.md`](ABLATION_EXPERIMENT_MAP.md).
+
 ## Primary thesis comparison
 
 Include **only** these four roles in the main results comparison table:
 
-| Role | ID | Output path | Latent dim | Tuning | Validation AP | Test AP |
-|------|-----|-------------|------------|--------|---------------|---------|
-| P01 original-feature LightGBM default | P01 | `outputs/baseline_lgbm/` | — | Default | 0.602433 | 0.485756 |
-| P02 original-feature LightGBM tuned | P02 | `outputs/optuna/baseline_lgbm/` | — | Optuna 15 trials | 0.624072 | 0.501438 |
-| P03 AE replacement default | P03 | `outputs/ae_lgbm/` | **32** | Default | 0.591398 | 0.481593 |
-| P04 AE replacement tuned | P04 | `outputs/optuna/ae_lgbm_ld128/` | **128** | Optuna 15 trials | 0.610631 | 0.490686 |
+| Role | Canonical / Legacy ID | Output path | Latent dim | Tuning | Validation AP | Test AP |
+|------|-----------------------|-------------|------------|--------|---------------|---------|
+| original-feature LightGBM default | **BASE-01 / P01** | `outputs/baseline_lgbm/` | — | Default | 0.602433 | 0.485756 |
+| original-feature LightGBM tuned | **BASE-02 / P02** | `outputs/optuna/baseline_lgbm/` | — | Optuna 15 trials | 0.624072 | 0.501438 |
+| AE replacement default | **AE-01 / P03** | `outputs/ae_lgbm/` | **32** | Default | 0.591398 | 0.481593 |
+| AE replacement tuned | **AE-02 / P04** | `outputs/optuna/ae_lgbm_ld128/` | **128** | Optuna 15 trials | 0.610631 | 0.490686 |
 
 Metric sources: `metrics_validation_selected_threshold.json` and `metrics_test_selected_threshold.json` in each output directory.
 
@@ -62,10 +70,10 @@ Smallest distinct set for thesis ablation chapter / appendix:
 
 ## Methodological appendix
 
-| ID | Content | Thesis role |
-|----|---------|-------------|
-| MD01–MD04 | Chronological vs stratified holdout (baseline + FE) | Supports chronological protocol choice |
-| MD05–MD06 | Stratified 5-fold CV OOF benchmarks | Non-temporal sensitivity only |
+| Canonical / Legacy ID | Content | Thesis role |
+|-----------------------|---------|-------------|
+| **APP-01 / MD01–MD04** | Chronological vs stratified holdout (baseline + FE) | Supports chronological protocol choice |
+| **APP-01 / MD05–MD06** | Stratified 5-fold CV OOF benchmarks | Non-temporal sensitivity only |
 
 **Policy:** Appendix demonstrates that stratified evaluation yields much higher AP than chronological evaluation. It does **not** select the final model and must not replace primary results in the main chapter.
 
@@ -144,7 +152,7 @@ AAE01 is an **anchor-alignment Autoencoder diagnostic**, not a primary thesis mo
 
 AAE02 is the **final permitted anchor-alignment diagnostic**. No further AE branches are authorized.
 
-## Resolved causal behavioral question (CBA01R — corrected authoritative 2026-06-10)
+## Resolved causal behavioral question (BEH-01 / CBA01R — corrected authoritative 2026-06-10)
 
 **Question:** Do identity-aligned causal behavioral features improve chronological validation AP versus P01?
 
@@ -160,7 +168,7 @@ AAE02 is the **final permitted anchor-alignment diagnostic**. No further AE bran
 
 CBA01 remains archived as **provisional** due to 16,309 within-split TransactionID mismatches under the legacy generator. CBA01R is the authoritative B2 result.
 
-## Resolved CDV-after-behavioral question (CBA02R — corrected authoritative 2026-06-10)
+## Resolved CDV-after-behavioral question (BEH-02 / CBA02R — corrected authoritative 2026-06-10)
 
 **Question:** Does ID-aligned CDV reconstruction error add complementary validation AP after corrected causal behavioral features?
 
@@ -176,22 +184,22 @@ CBA01 remains archived as **provisional** due to 16,309 within-split Transaction
 
 CBA02 is archived as provisional. CBA02R is the authoritative B3 result.
 
-## Resolved late-fusion question (LF01 — executed 2026-06-10, explicit freeze exception)
+## Resolved late-fusion question (FUS-01 / LF01 — executed 2026-06-10, explicit freeze exception)
 
-**Question:** Does frozen P04 provide complementary ranking information that improves CBA01R through validation-selected score-level fusion?
+**Question:** Does frozen AE-02 / P04 provide complementary ranking information that improves BEH-01 / CBA01R through validation-selected score-level fusion?
 
 **Experiment:** `outputs/causal_behavioral_ae_late_fusion/` (`src/run_causal_behavioral_ae_late_fusion.py`)
 
 | Model | Validation AP | Delta vs CBA01R | Delta vs P02 |
 |-------|---------------|-----------------|--------------|
-| CBA01R | 0.615122 | — | −0.008950 |
-| P04 | 0.610631 | −0.004491 | −0.013441 |
-| P02 | 0.624072 | +0.008950 | — |
-| **LF01 late fusion (50/50)** | **0.629600** | **+0.014478** | **+0.005528** |
+| BEH-01 / CBA01R | 0.615122 | — | −0.008950 |
+| AE-02 / P04 | 0.610631 | −0.004491 | −0.013441 |
+| BASE-02 / P02 | 0.624072 | +0.008950 | — |
+| **FUS-01 / LF01 late fusion (50/50)** | **0.629600** | **+0.014478** | **+0.005528** |
 
 **Conclusion (predefined practical success rule):** **Strong success** — AE expert contributes at decision level; fusion exceeds both CBA01R and P02 on validation AP. Evidence: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`, `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
 
-**Governance:** LF01 was executed as an explicit researcher-directed exception to the post-TAE01 freeze. Supervisor approval is still required before promoting LF01 to a primary thesis model. P01–P04 primary roles remain unchanged until supervisor decision.
+**Governance:** FUS-01 / LF01 was executed as an explicit researcher-directed exception to the post-TAE01 freeze. Supervisor approval is still required before promoting FUS-01 to a primary thesis model. BASE-01–AE-02 primary roles remain unchanged until supervisor decision.
 
 ## Resolved task-aware AE question (TAE01 — executed 2026-06-10)
 

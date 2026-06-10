@@ -4,6 +4,14 @@
 
 Recommend a **minimal** set of small, thesis-relevant artifacts that may later be tracked in Git for reproducibility and supervisor review. This document does **not** modify `.gitignore` yet.
 
+## Canonical naming
+
+Artifacts below are keyed by legacy output paths. Canonical experiment IDs for thesis writing: **BASE-01 / P01**, **BASE-02 / P02**, **AE-02 / P04**, **BEH-01 / CBA01R**, **FUS-01 / LF01**.
+
+**Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
+
+See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md).
+
 **Current state:** `outputs/*` is entirely gitignored (`.gitignore` line 27). All artifacts below exist locally but are untracked.
 
 **Exclusions (do not track):** model binaries, `.pkl`, `.keras`, latent `.npy`, `oof_scores.csv`, prediction/score CSVs, Optuna `study.db`, raw data, full `outputs/` trees.
@@ -12,20 +20,20 @@ Recommend a **minimal** set of small, thesis-relevant artifacts that may later b
 
 | Artifact | Purpose | Size (approx.) | Track recommendation | Reason |
 |----------|---------|----------------|----------------------|--------|
-| `outputs/baseline_lgbm/run_config.json` | P01 protocol record | 2.4 KB | **Yes** | Defines chronological split, features, threshold policy |
-| `outputs/baseline_lgbm/metrics_validation_selected_threshold.json` | P01 validation AP | 0.4 KB | **Yes** | Primary selection metric |
-| `outputs/baseline_lgbm/metrics_test_selected_threshold.json` | P01 test AP | 0.4 KB | **Yes** | Frozen final reporting |
-| `outputs/optuna/baseline_lgbm/run_config.json` | P02 tuning record | 4.6 KB | **Yes** | Optuna budget, best params context |
-| `outputs/optuna/baseline_lgbm/best_params.json` | P02 selected hyperparameters | small | **Yes** | Reproducibility without DB |
-| `outputs/optuna/baseline_lgbm/metrics_validation_selected_threshold.json` | P02 validation AP | 0.4 KB | **Yes** | Primary selection metric |
-| `outputs/optuna/baseline_lgbm/metrics_test_selected_threshold.json` | P02 test AP | 0.4 KB | **Yes** | Frozen final reporting |
-| `outputs/ae_lgbm/run_config.json` | P03 replacement LD32 record | 2.9 KB | **Yes** | Feature construction proof |
-| `outputs/ae_lgbm/metrics_validation_selected_threshold.json` | P03 validation AP | 0.4 KB | **Yes** | Primary selection metric |
-| `outputs/ae_lgbm/metrics_test_selected_threshold.json` | P03 test AP | 0.4 KB | **Yes** | Frozen final reporting |
-| `outputs/optuna/ae_lgbm_ld128/run_config.json` | P04 tuned LD128 record | 4.9 KB | **Yes** | Documents LD128 tuned candidate |
-| `outputs/optuna/ae_lgbm_ld128/best_params.json` | P04 selected hyperparameters | small | **Yes** | Reproducibility without DB |
-| `outputs/optuna/ae_lgbm_ld128/metrics_validation_selected_threshold.json` | P04 validation AP | 0.4 KB | **Yes** | Primary selection metric |
-| `outputs/optuna/ae_lgbm_ld128/metrics_test_selected_threshold.json` | P04 test AP | 0.4 KB | **Yes** | Frozen final reporting |
+| `outputs/baseline_lgbm/run_config.json` | BASE-01 / P01 protocol record | 2.4 KB | **Yes** | Defines chronological split, features, threshold policy |
+| `outputs/baseline_lgbm/metrics_validation_selected_threshold.json` | BASE-01 / P01 validation AP | 0.4 KB | **Yes** | Primary selection metric |
+| `outputs/baseline_lgbm/metrics_test_selected_threshold.json` | BASE-01 / P01 test AP | 0.4 KB | **Yes** | Frozen final reporting |
+| `outputs/optuna/baseline_lgbm/run_config.json` | BASE-02 / P02 tuning record | 4.6 KB | **Yes** | Optuna budget, best params context |
+| `outputs/optuna/baseline_lgbm/best_params.json` | BASE-02 / P02 selected hyperparameters | small | **Yes** | Reproducibility without DB |
+| `outputs/optuna/baseline_lgbm/metrics_validation_selected_threshold.json` | BASE-02 / P02 validation AP | 0.4 KB | **Yes** | Primary selection metric |
+| `outputs/optuna/baseline_lgbm/metrics_test_selected_threshold.json` | BASE-02 / P02 test AP | 0.4 KB | **Yes** | Frozen final reporting |
+| `outputs/ae_lgbm/run_config.json` | AE-01 / P03 replacement LD32 record | 2.9 KB | **Yes** | Feature construction proof |
+| `outputs/ae_lgbm/metrics_validation_selected_threshold.json` | AE-01 / P03 validation AP | 0.4 KB | **Yes** | Primary selection metric |
+| `outputs/ae_lgbm/metrics_test_selected_threshold.json` | AE-01 / P03 test AP | 0.4 KB | **Yes** | Frozen final reporting |
+| `outputs/optuna/ae_lgbm_ld128/run_config.json` | AE-02 / P04 tuned LD128 record | 4.9 KB | **Yes** | Documents LD128 tuned candidate |
+| `outputs/optuna/ae_lgbm_ld128/best_params.json` | AE-02 / P04 selected hyperparameters | small | **Yes** | Reproducibility without DB |
+| `outputs/optuna/ae_lgbm_ld128/metrics_validation_selected_threshold.json` | AE-02 / P04 validation AP | 0.4 KB | **Yes** | Primary selection metric |
+| `outputs/optuna/ae_lgbm_ld128/metrics_test_selected_threshold.json` | AE-02 / P04 test AP | 0.4 KB | **Yes** | Frozen final reporting |
 
 ## Comparison and ablation summaries
 
@@ -88,7 +96,7 @@ Recommend a **minimal** set of small, thesis-relevant artifacts that may later b
 | `outputs/causal_behavioral_lgbm_default/metrics_validation_selected_threshold.json` | B2 legacy validation AP | 0.4 KB | **Optional** | Superseded by CBA01R |
 | `outputs/causal_behavioral_lgbm_id_aligned/run_config.json` | CBA01R corrected protocol | ~5 KB | **Yes** | Identity-safe B2 proof |
 | `outputs/causal_behavioral_lgbm_id_aligned/alignment_validation.json` | CBA01R ID join validation | small | **Yes** | TransactionID alignment evidence |
-| `outputs/causal_behavioral_lgbm_id_aligned/metrics_validation_selected_threshold.json` | CBA01R validation AP | 0.4 KB | **Yes** | **Authoritative CBA01R metric** |
+| `outputs/causal_behavioral_lgbm_id_aligned/metrics_validation_selected_threshold.json` | BEH-01 / CBA01R validation AP | 0.4 KB | **Yes** | **Authoritative BEH-01 / CBA01R metric** |
 | `outputs/causal_behavioral_lgbm_id_aligned/metrics_test_selected_threshold.json` | CBA01R test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/run_config.json` | CBA02R corrected protocol | ~5 KB | **Yes** | Identity-safe B3 proof |
 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/metrics_validation_selected_threshold.json` | CBA02R validation AP | 0.4 KB | **Yes** | **Authoritative CBA02R metric** |
@@ -106,8 +114,8 @@ Recommend a **minimal** set of small, thesis-relevant artifacts that may later b
 | `outputs/final_comparison/task_aware_ae_comparison.csv` | P01 vs AAE01 vs TAE01 comparison | ~1 KB | **Yes** | Final task-aware integration evidence |
 | `outputs/causal_behavioral_ae_late_fusion/frozen_fusion_config.json` | LF01 frozen fusion weights and threshold | ~1 KB | **Yes** | Decision-level integration proof |
 | `outputs/causal_behavioral_ae_late_fusion/run_config.json` | LF01 protocol record | ~4 KB | **Yes** | Identity-safe score fusion lineage |
-| `outputs/causal_behavioral_ae_late_fusion/metrics_validation_selected_threshold.json` | LF01 validation AP | 0.4 KB | **Yes** | Primary LF01 metric |
-| `outputs/causal_behavioral_ae_late_fusion/metrics_test_selected_threshold.json` | LF01 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
+| `outputs/causal_behavioral_ae_late_fusion/metrics_validation_selected_threshold.json` | FUS-01 / LF01 validation AP | 0.4 KB | **Yes** | Primary FUS-01 / LF01 metric |
+| `outputs/causal_behavioral_ae_late_fusion/metrics_test_selected_threshold.json` | FUS-01 / LF01 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
 | `outputs/causal_behavioral_ae_late_fusion/complementarity_summary.json` | Validation complementarity audit | ~2 KB | **Yes** | Expert complementarity evidence |
 | `outputs/causal_behavioral_ae_late_fusion/paired_bootstrap_summary.json` | Paired AP-delta bootstrap | ~2 KB | **Yes** | Uncertainty quantification |
 | `outputs/final_comparison/causal_behavioral_ae_late_fusion_weight_search.csv` | Predefined weight grid results | ~1 KB | **Yes** | Validation-only weight selection |

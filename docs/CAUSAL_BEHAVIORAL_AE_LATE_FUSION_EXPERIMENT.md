@@ -1,12 +1,18 @@
 # Causal Behavioral and AE–LightGBM Late Fusion
 
+**Canonical ID:** **FUS-01 / LF01** — thesis-candidate score-level fusion of **BEH-01 / CBA01R** and **AE-02 / P04**.
+
+**Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
+
+See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md), [`docs/ACTIVE_EXPERIMENT_MAP.md`](ACTIVE_EXPERIMENT_MAP.md).
+
 ## Motivation
 
 Feature-level Autoencoder integration repeatedly failed to improve chronological validation Average Precision versus the original-feature LightGBM baseline. Latent replacement, latent augmentation, broader selected-numerical replacement, decoder reconstruction, task-aware latent learning, and CDV reconstruction error after causal behavioral features all remained below stronger references under the executed protocol.
 
 CDV reconstruction error (CBA02R) degraded the identity-aligned causal behavioral model. However, historical score-level ensembles in exploratory branches showed a small positive signal, suggesting that Autoencoder-derived predictions may capture a complementary ranking perspective when kept as an independent expert and fused at decision level—without altering the stronger causal behavioral feature space.
 
-Late fusion preserves CBA01R as the primary behavioral expert while allowing the frozen P04 V-only AE–LightGBM expert to contribute at the probability level.
+Late fusion preserves BEH-01 / CBA01R as the primary behavioral expert while allowing the frozen AE-02 / P04 V-only AE–LightGBM expert to contribute at the probability level.
 
 ## Research question
 
@@ -14,10 +20,10 @@ Does a frozen V-only AE–LightGBM expert provide complementary fraud-ranking in
 
 ## Expert models
 
-| Expert | ID | Features | LightGBM | Validation AP | Test AP (descriptive) |
-|--------|-----|----------|----------|---------------|----------------------|
-| CBA01R | CBA01R | 432 original + 19 identity-aligned causal behavioral | Default | 0.615122 | 0.493838 |
-| P04 | P04 | 93 non-V + 128 LD128 latent (V replaced) | Optuna tuned | 0.610631 | 0.490686 |
+| Expert | Canonical / Legacy ID | Features | LightGBM | Validation AP | Test AP (descriptive) |
+|--------|---------------------|----------|----------|---------------|----------------------|
+| Behavioral | **BEH-01 / CBA01R** | 432 original + 19 identity-aligned causal behavioral | Default | 0.615122 | 0.493838 |
+| AE representation | **AE-02 / P04** | 93 non-V + 128 LD128 latent (V replaced) | Optuna tuned | 0.610631 | 0.490686 |
 
 Artifacts: `outputs/causal_behavioral_lgbm_id_aligned/`, `outputs/optuna/ae_lgbm_ld128/`, `outputs/autoencoder_robust_ld128/`.
 
@@ -81,7 +87,7 @@ where `ae_weight = 1 − behavioral_weight`.
 | CBA01R | 0.615122 | — | +0.004491 | −0.008950 |
 | P04 | 0.610631 | −0.004491 | — | −0.013441 |
 | P02 | 0.624072 | +0.008950 | +0.013441 | — |
-| **LF01 (selected)** | **0.629600** | **+0.014478** | **+0.018969** | **+0.005528** |
+| **FUS-01 / LF01 (selected)** | **0.629600** | **+0.014478** | **+0.018969** | **+0.005528** |
 
 **Selected weights:** behavioral_weight = 0.50, ae_weight = 0.50.
 
@@ -134,7 +140,7 @@ The measured validation gain (+0.014478 AP vs CBA01R, +0.005528 vs P02) suggests
 
 ## Final conclusion
 
-Under the predefined practical success rule, LF01 achieves **strong success**: validation-selected 50/50 late fusion improves validation AP meaningfully above CBA01R (+0.014478) and above P02 (+0.005528), with moderate expert complementarity and paired-bootstrap support on validation. Test metrics are reported descriptively only.
+Under the predefined practical success rule, FUS-01 / LF01 achieves **strong success**: validation-selected 50/50 late fusion improves validation AP meaningfully above BEH-01 / CBA01R (+0.014478) and above BASE-02 / P02 (+0.005528), with moderate expert complementarity and paired-bootstrap support on validation. Test metrics are reported descriptively only.
 
 ## Artifacts
 

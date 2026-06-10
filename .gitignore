@@ -137,6 +137,9 @@ pip-wheel-metadata/
 
 .idea/
 
+# Local IDE / agent session captures (not thesis artifacts)
+terminals/
+
 
 # =========================================================
 # Testing / Coverage / Cache

@@ -1,5 +1,32 @@
 # Experiment Registry
 
+## Canonical naming (dual notation)
+
+Thesis-facing experiments use **canonical IDs** alongside legacy repository IDs. Example: **FUS-01 / LF01**, **BEH-01 / CBA01R**, **AE-02 / P04**.
+
+**Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
+
+| Canonical ID | Legacy ID | Status (canonical) |
+|--------------|-----------|-------------------|
+| BASE-01 | P01 | `active_reference` |
+| BASE-02 | P02 | `active_reference` |
+| AE-01 | P03 | `ablation_evidence` |
+| AE-02 | P04 | `active_expert` |
+| AE-03 | AE17 | `ablation_evidence` |
+| AE-04 | AAE01 | `ablation_evidence` |
+| AE-05 | AAE02 | `ablation_evidence` |
+| AE-06 | AE15 (FE+CDV recon Arm A) | `legacy_archived` |
+| AE-07 | TAE01 | `ablation_evidence` |
+| BEH-01 | CBA01R | `active_expert` |
+| BEH-02 | CBA02R | `ablation_evidence` |
+| FUS-01 | LF01 | `thesis_candidate` |
+| APP-01 | MD01–MD06 | `diagnostic_appendix` |
+| LEGACY-01 | CBA01 | `provisional_superseded` |
+| LEGACY-02 | CBA02 | `provisional_superseded` |
+| LEGACY-03 | EX05–EX08 | `legacy_archived` |
+
+Full registry: [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md). Active path: [`docs/ACTIVE_EXPERIMENT_MAP.md`](ACTIVE_EXPERIMENT_MAP.md). Ablations: [`docs/ABLATION_EXPERIMENT_MAP.md`](ABLATION_EXPERIMENT_MAP.md). Repository audit: [`docs/REPOSITORY_CLEANUP_AUDIT.md`](REPOSITORY_CLEANUP_AUDIT.md).
+
 ## Purpose
 
 This registry is the authoritative map of experiment status and thesis relevance for the `ecommerce_fraud_detection` repository. Every status claim is tied to locally inspected source scripts, `src/config.py` entries, and `outputs/` artifacts. Config presence alone does not imply execution. Output directory presence alone does not imply completeness.
@@ -91,12 +118,12 @@ The registry supports documentation-first experiment governance. It does not mod
 
 ## Primary thesis experiments
 
-| ID | Model role | Feature setup | Original V retained | Latent used | AE regime | Latent dimension | LightGBM tuning | Validation AP | Test AP | Metric sources | Comparability notes | Status |
-|----|------------|---------------|---------------------|-------------|-----------|------------------|-----------------|---------------|---------|----------------|---------------------|--------|
-| P01 | original-feature LightGBM default | 432 original tabular features incl. raw V and TransactionDT | Yes | No | — | — | Default params | 0.602433 | 0.485756 | `outputs/baseline_lgbm/metrics_validation_selected_threshold.json`, `outputs/baseline_lgbm/metrics_test_selected_threshold.json` | Chronological 60/20/20; full data (`sample_size=null`); MCC threshold on validation | Complete |
-| P02 | original-feature LightGBM tuned | Same 432 original features | Yes | No | — | — | Optuna TPE, 15 trials, `tuning_profile=final` | 0.624072 | 0.501438 | `outputs/optuna/baseline_lgbm/metrics_validation_selected_threshold.json`, `outputs/optuna/baseline_lgbm/metrics_test_selected_threshold.json` | Same split protocol as P01; comparable tuning budget to P04 | Complete |
-| P03 | AE-LightGBM replacement default | 93 non-V + 32 latent (V replaced) | No | Yes | All-class robust AE | 32 | Default params | 0.591398 | 0.481593 | `outputs/ae_lgbm/metrics_validation_selected_threshold.json`, `outputs/ae_lgbm/metrics_test_selected_threshold.json` | Uses `outputs/autoencoder_robust/`; directly comparable to P01 on split and sample mode | Complete |
-| P04 | AE-LightGBM replacement tuned | 93 non-V + 128 latent (V replaced) | No | Yes | All-class robust AE | 128 | Optuna TPE, 15 trials | 0.610631 | 0.490686 | `outputs/optuna/ae_lgbm_ld128/metrics_validation_selected_threshold.json`, `outputs/optuna/ae_lgbm_ld128/metrics_test_selected_threshold.json` | **Not directly comparable to P03**: different latent dimension (128 vs 32). No executed `ae_lgbm` LD32 tuned run found. | Partial — requires rerun for strict LD32 tuned role |
+| Canonical / Legacy ID | Model role | Feature setup | Original V retained | Latent used | AE regime | Latent dimension | LightGBM tuning | Validation AP | Test AP | Metric sources | Comparability notes | Status |
+|-----------------------|------------|---------------|---------------------|-------------|-----------|------------------|-----------------|---------------|---------|----------------|---------------------|--------|
+| **BASE-01 / P01** | original-feature LightGBM default | 432 original tabular features incl. raw V and TransactionDT | Yes | No | — | — | Default params | 0.602433 | 0.485756 | `outputs/baseline_lgbm/metrics_validation_selected_threshold.json`, `outputs/baseline_lgbm/metrics_test_selected_threshold.json` | Chronological 60/20/20; full data (`sample_size=null`); MCC threshold on validation | Complete |
+| **BASE-02 / P02** | original-feature LightGBM tuned | Same 432 original features | Yes | No | — | — | Optuna TPE, 15 trials, `tuning_profile=final` | 0.624072 | 0.501438 | `outputs/optuna/baseline_lgbm/metrics_validation_selected_threshold.json`, `outputs/optuna/baseline_lgbm/metrics_test_selected_threshold.json` | Same split protocol as P01; comparable tuning budget to P04 | Complete |
+| **AE-01 / P03** | AE-LightGBM replacement default | 93 non-V + 32 latent (V replaced) | No | Yes | All-class robust AE | 32 | Default params | 0.591398 | 0.481593 | `outputs/ae_lgbm/metrics_validation_selected_threshold.json`, `outputs/ae_lgbm/metrics_test_selected_threshold.json` | Uses `outputs/autoencoder_robust/`; directly comparable to P01 on split and sample mode | Complete |
+| **AE-02 / P04** | AE-LightGBM replacement tuned | 93 non-V + 128 latent (V replaced) | No | Yes | All-class robust AE | 128 | Optuna TPE, 15 trials | 0.610631 | 0.490686 | `outputs/optuna/ae_lgbm_ld128/metrics_validation_selected_threshold.json`, `outputs/optuna/ae_lgbm_ld128/metrics_test_selected_threshold.json` | **Not directly comparable to P03**: different latent dimension (128 vs 32). No executed `ae_lgbm` LD32 tuned run found. Active expert for FUS-01 / LF01. | Partial — requires rerun for strict LD32 tuned role |
 
 ### Primary role gaps
 
@@ -122,7 +149,7 @@ The registry supports documentation-first experiment governance. It does not mod
 | AE08 | Is reconstruction error alone useful? | Baseline + raw recon MSE | P01 | V-features | All-class robust LD128 | 128 (AE only) | Yes | Yes (raw) | 0.612429 | 0.496067 | `outputs/baseline_lgbm_plus_ae_reconstruction_mse/metrics_*_selected_threshold.json` | Validation AP > P01; test AP still < P02. Does not establish AE superiority for thesis main claim | High |
 | AE09 | Does log1p transform change recon-error utility? | Baseline + log1p recon MSE | AE08 | V-features | All-class robust LD128 | 128 (AE only) | Yes | Yes (log1p) | 0.612429 | 0.496067 | `outputs/baseline_lgbm_plus_log1p_ae_reconstruction_mse/metrics_*_selected_threshold.json` | Identical validation/test AP to AE08 in saved artifacts | High |
 | AE12 | Does normal-only AE recon error differ from all-class? | Baseline + normal-only raw recon | AE08 | V-features | Normal-only | 128 (AE only) | Yes | Yes (raw) | 0.609163 | 0.487441 | `outputs/baseline_lgbm_plus_normal_only_ae_reconstruction_mse/metrics_*_selected_threshold.json` | Normal-only AE recon did not outperform all-class recon on test AP | High |
-| AE15 | Do behavioral/CDV AE features help under FE? | FE-LGBM + CDV recon error | EX01 | CDV behavioral subset | CDV AE | 128 | Yes (FE + originals) | Yes | 0.635954 | 0.511667 | `outputs/behavioral_cdv_ae_experiment/A_fe_lgbm_cdv_reconstruction_mse_default/metrics_*`, `comparison.csv` | Weak additive signal under FE; not a replacement for main AE thesis pipeline | Medium |
+| AE15 (**AE-06**) | Do behavioral/CDV AE features help under FE? | FE-LGBM + CDV recon error (Arm A) | EX01 | 432 originals + 87 static FE + 1 CDV recon error | CDV AE (recon error only; latent unused) | 128 (AE only) | Yes (all V retained) | Yes (one scalar) | 0.635954 | 0.511667 | `outputs/behavioral_cdv_ae_experiment/A_fe_lgbm_cdv_reconstruction_mse_default/metrics_*`, `comparison.csv` | **`legacy_archived`** — FE-space exploratory; not comparable to BASE-02/BEH-01/FUS-01. High validation AP rides on static FE baseline (0.627793). Governed BEH-02 shows CDV recon hurts (−0.014515 vs BEH-01). Not score ensemble. | Medium |
 | CBA01 | Do causal behavioral features improve P01? | Causal behavioral B2 | P01 | Original + 19 causal behavioral | — | — | Yes | No | 0.613738 | 0.495350 | `outputs/causal_behavioral_lgbm_default/metrics_*_selected_threshold.json` | **Provisional** — superseded by CBA01R due to alignment risk | Medium |
 | CBA01R | Do identity-aligned causal behavioral features improve P01? | Causal behavioral B2 corrected | P01 | Original + 19 causal behavioral (ID-restored) | — | — | Yes | No | **0.615122** | 0.493838 | `outputs/causal_behavioral_lgbm_id_aligned/metrics_*_selected_threshold.json` | Validation AP +0.012689 vs P01; Rule A | High |
 | CBA02 | Does CDV recon error help after causal behavioral context? | B2 + CDV recon B3 | CBA01 | B2 + `cdv_ae_reconstruction_mse` | CDV AE (frozen) | 128 (AE only) | Yes | Yes (one feature) | 0.600659 | 0.484615 | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/metrics_*` | **Provisional** — superseded by CBA02R | Medium |
@@ -355,11 +382,11 @@ Multiple exploratory branches (`outputs/final_comparison/next_controlled_experim
 
 Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`, `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`, `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
 
-### Late fusion experiment (LF01 — executed 2026-06-10, freeze exception)
+### Late fusion experiment (FUS-01 / LF01 — executed 2026-06-10, freeze exception)
 
 | Criterion | Status |
 |-----------|--------|
-| Frozen CBA01R + frozen P04 score-level fusion | **Executed** |
+| Frozen BEH-01 / CBA01R + frozen AE-02 / P04 score-level fusion | **Executed** |
 | Validation-only weight grid {0.50–1.00 step 0.05} | **Executed** |
 | Identity-safe TransactionID score alignment | **Verified** |
 | Scripts | `src/run_causal_behavioral_ae_late_fusion.py`, `src/audit_causal_behavioral_ae_complementarity.py` |
@@ -393,4 +420,4 @@ Comparison: `outputs/final_comparison/task_aware_ae_comparison.csv`, `outputs/fi
 
 ## Immediate next step
 
-**Use CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain archived as provisional. LF01 late fusion executed as explicit freeze exception; supervisor approval required before promoting LF01 to a primary thesis model. P01–P04 primary roles unchanged until supervisor decision.**
+**Use BEH-01 / CBA01R and BEH-02 / CBA02R as authoritative causal behavioral evidence. LEGACY-01 / CBA01 and LEGACY-02 / CBA02 remain archived as provisional. FUS-01 / LF01 late fusion executed as explicit freeze exception; supervisor approval required before promoting FUS-01 to a primary thesis model. BASE-01–AE-02 primary roles unchanged until supervisor decision. See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md).**
