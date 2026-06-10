@@ -172,7 +172,15 @@ The allowed unresolved Autoencoder questions have been **executed and closed**:
 
 Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`.
 
-**Late fusion remains blocked** pending supervisor approval. No further entity expansions, AE signals, tuning, or ensemble branches without approval.
+**LF01 late fusion executed** as explicit freeze exception (2026-06-10). Supervisor approval required before primary promotion. No further entity expansions, AE signals, tuning, or ensemble branches without approval.
+
+## Final permitted decision-level integration — causal behavioral + AE late fusion (executed 2026-06-10)
+
+| Experiment | Output | Validation AP | Delta vs CBA01R | Status |
+|------------|--------|---------------|-----------------|--------|
+| LF01 CBA01R + P04 late fusion | `outputs/causal_behavioral_ae_late_fusion/` | **0.629600** | **+0.014478** | Complete (freeze exception) |
+
+**LF01 result:** Validation-selected 50/50 convex fusion achieves predefined **strong success** versus CBA01R and P02. Comparison: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
 
 ## Final permitted AE integration experiment — task-aware latent learning (executed 2026-06-10)
 
@@ -216,4 +224,4 @@ Current paths remain authoritative until a governed migration is approved and do
 
 ## Immediate next step
 
-**Write final thesis diagnostic text using CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain provisional archives. Late fusion blocked pending supervisor approval.**
+**Write final thesis diagnostic text using CBA01R/CBA02R as authoritative causal behavioral evidence and LF01 as conditional thesis-candidate late fusion. CBA01/CBA02 remain provisional archives. Supervisor approval required before promoting LF01 to primary thesis model.**

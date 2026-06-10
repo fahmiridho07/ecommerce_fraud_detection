@@ -147,7 +147,25 @@ CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR = (
 CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION_FILE = (
     FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_alignment_correction.csv"
 )
+CAUSAL_BEHAVIORAL_AE_LATE_FUSION_OUTPUT_DIR = (
+    OUTPUT_DIR / "causal_behavioral_ae_late_fusion"
+)
+CAUSAL_BEHAVIORAL_AE_LATE_FUSION_WEIGHT_SEARCH_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_ae_late_fusion_weight_search.csv"
+)
+CAUSAL_BEHAVIORAL_AE_LATE_FUSION_COMPARISON_FILE = (
+    FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_ae_late_fusion_comparison.csv"
+)
 RESULTS_DIR = PROJECT_ROOT / "results"
+LATE_FUSION_COMPLEMENTARITY_SUMMARY_FILE = (
+    RESULTS_DIR / "late_fusion_complementarity_summary.json"
+)
+CAUSAL_BEHAVIORAL_AE_LATE_FUSION_RESULTS_CSV = (
+    RESULTS_DIR / "causal_behavioral_ae_late_fusion.csv"
+)
+CAUSAL_BEHAVIORAL_AE_LATE_FUSION_MANIFEST_FILE = (
+    RESULTS_DIR / "causal_behavioral_ae_late_fusion_manifest.json"
+)
 CAUSAL_BEHAVIORAL_AE_COMPARISON_FILE = (
     FINAL_COMPARISON_OUTPUT_DIR / "causal_behavioral_ae_comparison.csv"
 )
@@ -269,5 +287,6 @@ OUTPUT_PATHS = {
         CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR
     ),
     "causal_behavioral_alignment_audit": CAUSAL_BEHAVIORAL_ALIGNMENT_AUDIT_OUTPUT_DIR,
+    "causal_behavioral_ae_late_fusion": CAUSAL_BEHAVIORAL_AE_LATE_FUSION_OUTPUT_DIR,
     "split_strategy_appendix": SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR,
 }

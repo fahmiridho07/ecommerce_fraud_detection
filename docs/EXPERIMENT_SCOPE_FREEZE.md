@@ -174,7 +174,24 @@ CBA01 remains archived as **provisional** due to 16,309 within-split Transaction
 
 **Conclusion (Rule D):** ID-aligned CDV reconstruction error does **not** provide additional validation benefit beyond corrected causal behavioral features. Frozen CDV AE reused; no retraining.
 
-CBA02 is archived as provisional. CBA02R is the authoritative B3 result. **Late fusion remains blocked** pending supervisor approval.
+CBA02 is archived as provisional. CBA02R is the authoritative B3 result.
+
+## Resolved late-fusion question (LF01 — executed 2026-06-10, explicit freeze exception)
+
+**Question:** Does frozen P04 provide complementary ranking information that improves CBA01R through validation-selected score-level fusion?
+
+**Experiment:** `outputs/causal_behavioral_ae_late_fusion/` (`src/run_causal_behavioral_ae_late_fusion.py`)
+
+| Model | Validation AP | Delta vs CBA01R | Delta vs P02 |
+|-------|---------------|-----------------|--------------|
+| CBA01R | 0.615122 | — | −0.008950 |
+| P04 | 0.610631 | −0.004491 | −0.013441 |
+| P02 | 0.624072 | +0.008950 | — |
+| **LF01 late fusion (50/50)** | **0.629600** | **+0.014478** | **+0.005528** |
+
+**Conclusion (predefined practical success rule):** **Strong success** — AE expert contributes at decision level; fusion exceeds both CBA01R and P02 on validation AP. Evidence: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`, `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
+
+**Governance:** LF01 was executed as an explicit researcher-directed exception to the post-TAE01 freeze. Supervisor approval is still required before promoting LF01 to a primary thesis model. P01–P04 primary roles remain unchanged until supervisor decision.
 
 ## Resolved task-aware AE question (TAE01 — executed 2026-06-10)
 
@@ -194,7 +211,7 @@ TAE01 is the **final permitted AE integration diagnostic**. It is not automatica
 ## Test freeze rule (post-TAE01)
 
 1. **Model-design conclusions use validation AP** on chronological splits.
-2. **No further experiments** unless supervisor approves an exception. Anchor-alignment (AAE01, AAE02), causal behavioral (CBA01, CBA02), and task-aware AE (TAE01) phases are closed.
+2. **No further experiments** unless supervisor approves an exception. Anchor-alignment (AAE01, AAE02), causal behavioral (CBA01, CBA02), task-aware AE (TAE01), and decision-level late fusion (LF01) phases are closed.
 3. **Do not run** additional entity keys, time windows, multiple AE error signals, behavioral tuning, stacking, GNNs, VAE, GAN, attention, LSTM, SMOTE, lambda expansion, or Autoencoder architecture changes after TAE01.
 3. **Stratified appendix results must not determine model selection.**
 4. **Historical test inspection** across EX07/EX08/`final_summary.json` remains a documented limitation.

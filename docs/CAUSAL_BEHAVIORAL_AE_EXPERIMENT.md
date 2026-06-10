@@ -104,7 +104,7 @@ Legacy B2/B3 used global concat/re-sort and positional joins. Audit confirmed 16
 
 ## Stopping rule
 
-Causal behavioral experiment family is closed at CBA02R. Late fusion remains **blocked** pending supervisor approval. No additional entities, windows, AE signals, tuning, stacking, GNNs, or Autoencoder architecture changes without approval.
+Causal behavioral experiment family is closed at CBA02R. LF01 late fusion was executed as an explicit post-TAE01 freeze exception; see `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`. Supervisor approval is required before promoting LF01 to a primary thesis model. No additional entities, windows, AE signals, tuning, stacking, GNNs, or Autoencoder architecture changes without approval.
 
 ## Artifacts
 

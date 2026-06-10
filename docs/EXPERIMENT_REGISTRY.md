@@ -63,6 +63,7 @@ The registry supports documentation-first experiment governance. It does not mod
 | CBA01R | Causal behavioral LightGBM ID-aligned (B2 corrected) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/causal_behavioral_features.py`, `src/train_causal_behavioral_lgbm.py --id-aligned` | `CAUSAL_BEHAVIORAL_LGBM_ID_ALIGNED_OUTPUT_DIR` | `outputs/causal_behavioral_lgbm_id_aligned/` | `run_config.json`, `alignment_validation.json`, `metrics_*_selected_threshold.json`, `train_transaction_ids.json` |
 | CBA02 | Causal behavioral + CDV recon error (B3) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete (provisional — alignment risk) | `src/train_causal_behavioral_cdv_reconstruction_lgbm.py` | `CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_OUTPUT_DIR` | `outputs/causal_behavioral_cdv_reconstruction_lgbm_default/` | `run_config.json`, `metrics_*_selected_threshold.json`, `cdv_feature_importance.csv`, `source_ae_validation.json` |
 | CBA02R | Causal behavioral + CDV recon ID-aligned (B3 corrected) | Literature-motivated diagnostic | Yes | Yes | Yes | Complete | `src/train_causal_behavioral_cdv_reconstruction_lgbm.py --id-aligned` | `CAUSAL_BEHAVIORAL_CDV_RECONSTRUCTION_LGBM_ID_ALIGNED_OUTPUT_DIR` | `outputs/causal_behavioral_cdv_reconstruction_lgbm_id_aligned/` | `run_config.json`, `alignment_validation.json`, `metrics_*_selected_threshold.json` |
+| LF01 | Causal Behavioral + AE–LightGBM late fusion | Decision-level integration (freeze exception) | Yes | Yes | Yes | Complete | `src/run_causal_behavioral_ae_late_fusion.py` | `CAUSAL_BEHAVIORAL_AE_LATE_FUSION_OUTPUT_DIR` | `outputs/causal_behavioral_ae_late_fusion/` | `frozen_fusion_config.json`, `run_config.json`, `metrics_*_selected_threshold.json`, `paired_bootstrap_summary.json` |
 | AE16 | Legacy non-robust Autoencoder LD32 | AE diagnostic | Yes | Yes | Yes | Complete (superseded) | `src/train_autoencoder.py` | `AUTOENCODER_OUTPUT_DIR` | `outputs/autoencoder/` | `run_config.json`, `reconstruction_metrics.json` |
 | MD01 | Split appendix — baseline chronological holdout | Methodological | Yes | Yes | Yes | Complete | `src/compare_split_strategy_appendix.py` | `SPLIT_STRATEGY_APPENDIX_OUTPUT_DIR` | `outputs/split_strategy_appendix/holdout/baseline_lgbm/chronological/` | `run_config.json`, `metrics_test_selected_threshold.json`, `split_summary.json` |
 | MD02 | Split appendix — baseline stratified holdout | Methodological | Yes | Yes | Yes | Complete | `src/compare_split_strategy_appendix.py` | same | `outputs/split_strategy_appendix/holdout/baseline_lgbm/stratified_holdout/` | `run_config.json`, `metrics_test_selected_threshold.json` |
@@ -350,9 +351,27 @@ Multiple exploratory branches (`outputs/final_comparison/next_controlled_experim
 | CBA01R validation AP | **0.615122** (+0.012689 vs P01) |
 | CBA02R validation AP | **0.600607** (−0.014515 vs CBA01R) |
 | Interpretation | Rule A (P01 vs CBA01R); Rule D (CBA01R vs CBA02R) |
-| Late fusion | **Blocked** pending supervisor approval |
+| Late fusion (LF01) | **Executed** as explicit post-TAE01 freeze exception; supervisor approval required before primary promotion |
 
-Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`, `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`.
+Comparison: `outputs/final_comparison/causal_behavioral_alignment_correction.csv`. Details: `docs/CAUSAL_BEHAVIORAL_ALIGNMENT_CORRECTION.md`, `docs/CAUSAL_BEHAVIORAL_AE_EXPERIMENT.md`, `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
+
+### Late fusion experiment (LF01 — executed 2026-06-10, freeze exception)
+
+| Criterion | Status |
+|-----------|--------|
+| Frozen CBA01R + frozen P04 score-level fusion | **Executed** |
+| Validation-only weight grid {0.50–1.00 step 0.05} | **Executed** |
+| Identity-safe TransactionID score alignment | **Verified** |
+| Scripts | `src/run_causal_behavioral_ae_late_fusion.py`, `src/audit_causal_behavioral_ae_complementarity.py` |
+| Output | `outputs/causal_behavioral_ae_late_fusion/` |
+| Selected weights | behavioral 0.50 / AE 0.50 |
+| LF01 validation AP | **0.629600** |
+| Delta vs CBA01R validation AP | **+0.014478** |
+| Delta vs P02 validation AP | **+0.005528** |
+| Practical result category | **strong success** (predefined rule) |
+| Thesis-candidate status | **Conditional** — meets predefined practical success criterion; supervisor approval still required |
+
+Comparison: `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv`. Details: `docs/CAUSAL_BEHAVIORAL_AE_LATE_FUSION_EXPERIMENT.md`.
 
 ### Task-aware Autoencoder experiment (TAE01 — executed 2026-06-10)
 
@@ -374,4 +393,4 @@ Comparison: `outputs/final_comparison/task_aware_ae_comparison.csv`, `outputs/fi
 
 ## Immediate next step
 
-**Use CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain archived as provisional. Late fusion remains blocked pending supervisor approval.**
+**Use CBA01R/CBA02R as authoritative causal behavioral evidence. CBA01/CBA02 remain archived as provisional. LF01 late fusion executed as explicit freeze exception; supervisor approval required before promoting LF01 to a primary thesis model. P01–P04 primary roles unchanged until supervisor decision.**

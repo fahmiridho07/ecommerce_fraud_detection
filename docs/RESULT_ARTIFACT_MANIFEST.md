@@ -104,6 +104,17 @@ Recommend a **minimal** set of small, thesis-relevant artifacts that may later b
 | `outputs/task_aware_ae_lgbm_ld128/selected/metrics_test_selected_threshold.json` | TAE01 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
 | `outputs/final_comparison/task_aware_lambda_selection.csv` | Lambda ablation comparison | ~1 KB | **Yes** | TAE01 lambda-selection evidence |
 | `outputs/final_comparison/task_aware_ae_comparison.csv` | P01 vs AAE01 vs TAE01 comparison | ~1 KB | **Yes** | Final task-aware integration evidence |
+| `outputs/causal_behavioral_ae_late_fusion/frozen_fusion_config.json` | LF01 frozen fusion weights and threshold | ~1 KB | **Yes** | Decision-level integration proof |
+| `outputs/causal_behavioral_ae_late_fusion/run_config.json` | LF01 protocol record | ~4 KB | **Yes** | Identity-safe score fusion lineage |
+| `outputs/causal_behavioral_ae_late_fusion/metrics_validation_selected_threshold.json` | LF01 validation AP | 0.4 KB | **Yes** | Primary LF01 metric |
+| `outputs/causal_behavioral_ae_late_fusion/metrics_test_selected_threshold.json` | LF01 test AP | 0.4 KB | **Yes** | Descriptive final evaluation |
+| `outputs/causal_behavioral_ae_late_fusion/complementarity_summary.json` | Validation complementarity audit | ~2 KB | **Yes** | Expert complementarity evidence |
+| `outputs/causal_behavioral_ae_late_fusion/paired_bootstrap_summary.json` | Paired AP-delta bootstrap | ~2 KB | **Yes** | Uncertainty quantification |
+| `outputs/final_comparison/causal_behavioral_ae_late_fusion_weight_search.csv` | Predefined weight grid results | ~1 KB | **Yes** | Validation-only weight selection |
+| `outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv` | P01–P04 + CBA01R + LF01 table | ~2 KB | **Yes** | Controlled comparison evidence |
+| `results/causal_behavioral_ae_late_fusion.csv` | Trackable LF01 summary | ~1 KB | **Yes** | Git-tracked thesis-facing metrics |
+| `results/causal_behavioral_ae_late_fusion_manifest.json` | LF01 result manifest | ~2 KB | **Yes** | Git-tracked artifact lineage |
+| `results/late_fusion_complementarity_summary.json` | Thesis-safe complementarity summary | ~1 KB | **Yes** | No transaction-level records |
 | `outputs/final_comparison/causal_behavioral_feature_importance.csv` | B2/B3 importance by feature group | ~15 KB | **Optional** | Supports importance narrative |
 | `outputs/ae_augmented_lgbm_ld128/run_config.json` | Confounded augmentation design record | ~3 KB | **Optional** | Documents V+latent+recon confound |
 | `outputs/ae_augmented_lgbm_ld128/metrics_validation_selected_threshold.json` | AE06 validation AP | 0.4 KB | **Optional** | Supports integration diagnostic |

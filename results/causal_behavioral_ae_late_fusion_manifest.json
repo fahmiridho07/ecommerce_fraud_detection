@@ -1,0 +1,57 @@
+{
+  "experiment_id": "LF01",
+  "experiment_name": "Causal Behavioral + AE-LightGBM Late Fusion",
+  "commit_sha": "acc20da2ecd1cb370d937cd0fc9967d47c6dcdc2",
+  "exception_to_post_tae01_freeze": true,
+  "supervisor_approval_required_for_primary_promotion": true,
+  "source_expert_outputs": {
+    "cba01r": "outputs/causal_behavioral_lgbm_id_aligned/",
+    "p04": "outputs/optuna/ae_lgbm_ld128/",
+    "ae_ld128": "outputs/autoencoder_robust_ld128/"
+  },
+  "source_model_artifacts": {
+    "cba01r_model": "outputs/causal_behavioral_lgbm_id_aligned/model.pkl",
+    "cba01r_preprocessing": "outputs/causal_behavioral_lgbm_id_aligned/preprocessing.pkl",
+    "p04_model": "outputs/optuna/ae_lgbm_ld128/final_model.pkl",
+    "p04_preprocessing": "outputs/optuna/ae_lgbm_ld128/preprocessing_non_v.pkl",
+    "ae_encoder": "outputs/autoencoder_robust_ld128/encoder_model.keras",
+    "ae_scaler": "outputs/autoencoder_robust_ld128/v_scaler.pkl"
+  },
+  "source_metric_artifacts": {
+    "cba01r_validation": "outputs/causal_behavioral_lgbm_id_aligned/metrics_validation_selected_threshold.json",
+    "cba01r_test": "outputs/causal_behavioral_lgbm_id_aligned/metrics_test_selected_threshold.json",
+    "p04_validation": "outputs/optuna/ae_lgbm_ld128/metrics_validation_selected_threshold.json",
+    "p04_test": "outputs/optuna/ae_lgbm_ld128/metrics_test_selected_threshold.json"
+  },
+  "fusion_output_paths": {
+    "output_dir": "outputs/causal_behavioral_ae_late_fusion/",
+    "frozen_config": "outputs/causal_behavioral_ae_late_fusion/frozen_fusion_config.json",
+    "weight_search": "outputs/final_comparison/causal_behavioral_ae_late_fusion_weight_search.csv",
+    "comparison": "outputs/final_comparison/causal_behavioral_ae_late_fusion_comparison.csv",
+    "complementarity_summary": "outputs/causal_behavioral_ae_late_fusion/complementarity_summary.json",
+    "bootstrap_summary": "outputs/causal_behavioral_ae_late_fusion/paired_bootstrap_summary.json"
+  },
+  "tracked_results": {
+    "summary_csv": "results/causal_behavioral_ae_late_fusion.csv",
+    "complementarity_summary": "results/late_fusion_complementarity_summary.json",
+    "manifest": "results/causal_behavioral_ae_late_fusion_manifest.json"
+  },
+  "local_availability": {
+    "cba01r_artifacts": true,
+    "p04_artifacts": true,
+    "ae_ld128_artifacts": true,
+    "fusion_outputs": true
+  },
+  "git_tracking_status": {
+    "outputs_tracked": false,
+    "results_csv_tracked": true,
+    "results_manifest_tracked": true,
+    "transaction_level_scores_tracked": false
+  },
+  "scripts": [
+    "src/late_fusion_experts.py",
+    "src/audit_causal_behavioral_ae_complementarity.py",
+    "src/run_causal_behavioral_ae_late_fusion.py",
+    "src/build_causal_behavioral_ae_late_fusion_comparison.py"
+  ]
+}
