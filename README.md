@@ -31,9 +31,12 @@ Historical experiments are **retained** for ablation evidence, governance tracea
 - [`docs/ACTIVE_EXPERIMENT_MAP.md`](docs/ACTIVE_EXPERIMENT_MAP.md) — final active path
 - [`docs/ABLATION_EXPERIMENT_MAP.md`](docs/ABLATION_EXPERIMENT_MAP.md) — ablation and legacy evidence
 - [`docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`](docs/INITIAL_PROPOSAL_RERUN_GUIDE.md) — BASE-01..AE-02 proposal-only rerun path
+- [`docs/AE_INTEGRATION_STRATEGY_ABLATION.md`](docs/AE_INTEGRATION_STRATEGY_ABLATION.md) — STR-B0..STR-AE3 AE integration strategy ablation
 - [`docs/REPOSITORY_CLEANUP_AUDIT.md`](docs/REPOSITORY_CLEANUP_AUDIT.md) — repository hygiene audit
 
 Initial proposal reruns (BASE-01, BASE-02, AE-01, AE-02) are separate from LF01/fusion and other out-of-scope branches. After a proposal rerun, build `outputs/final_comparison/initial_proposal_comparison.csv` (generated output under gitignored `outputs/`, not tracked in git).
+
+The AE integration strategy ablation (STR-B0..STR-AE3) is a separate diagnostic path under `outputs/ae_integration_strategy_ablation/`; it is not the initial proposal literal rerun and does not modify LF01/fusion experiments.
 
 ## Canonical experiment IDs (active path)
 
