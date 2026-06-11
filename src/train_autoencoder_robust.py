@@ -42,6 +42,7 @@ from config import (
     TRAIN_RATIO,
     VALID_RATIO,
 )
+from train_ae_lgbm import save_latent_split_manifest
 from data_loader import load_labeled_train_data
 from preprocessing import get_v_feature_columns
 from splitting import chronological_split
@@ -272,6 +273,7 @@ def main(
         X_test,
         output_dir,
     )
+    save_latent_split_manifest(train_df, valid_df, test_df, output_dir)
 
     log("Computing robust reconstruction metrics.")
     train_errors = reconstruction_errors(autoencoder, X_train, AE_BATCH_SIZE)

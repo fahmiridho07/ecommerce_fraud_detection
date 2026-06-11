@@ -54,6 +54,9 @@ from utils import ensure_dir, log, save_json, set_seed
 
 DEFAULT_THRESHOLD = 0.5
 EARLY_STOPPING_ROUNDS = 100
+LATENT_SPLIT_MANIFEST_CSV = "latent_split_manifest.csv"
+LATENT_SPLIT_MANIFEST_JSON = "latent_split_manifest_summary.json"
+LATENT_SPLIT_MANIFEST_SORT_ORDER = "TransactionDT asc, TransactionID asc"
 
 
 def average_precision_eval(y_true, y_pred):
@@ -102,6 +105,129 @@ def load_robust_latent_outputs(
         raise TypeError("latent_feature_names.json must contain a list of feature names.")
 
     return latent_train, latent_valid, latent_test, latent_feature_names, run_config
+
+
+def build_latent_split_manifest_frame(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Build the row manifest used to guard AE latent alignment."""
+    manifest_rows: list[dict[str, object]] = []
+    for split_name, split_df in (
+        ("train", train_df),
+        ("validation", valid_df),
+        ("test", test_df),
+    ):
+        for row_position, (_, row) in enumerate(split_df.iterrows()):
+            manifest_rows.append(
+                {
+                    "split": split_name,
+                    "row_position": row_position,
+                    ID_COL: row[ID_COL],
+                    TIME_COL: row[TIME_COL],
+                    TARGET_COL: int(row[TARGET_COL]),
+                }
+            )
+    return pd.DataFrame(manifest_rows)
+
+
+def save_latent_split_manifest(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    output_dir: Path,
+) -> None:
+    """Persist split row order beside latent arrays for downstream alignment checks."""
+    manifest_df = build_latent_split_manifest_frame(train_df, valid_df, test_df)
+    manifest_df.to_csv(output_dir / LATENT_SPLIT_MANIFEST_CSV, index=False)
+
+    split_summaries: dict[str, dict[str, object]] = {}
+    for split_name, split_df in (
+        ("train", train_df),
+        ("validation", valid_df),
+        ("test", test_df),
+    ):
+        split_summaries[split_name] = {
+            "rows": int(len(split_df)),
+            "first_transaction_id": int(split_df[ID_COL].iloc[0]),
+            "last_transaction_id": int(split_df[ID_COL].iloc[-1]),
+        }
+
+    summary = {
+        "train_rows": split_summaries["train"]["rows"],
+        "valid_rows": split_summaries["validation"]["rows"],
+        "test_rows": split_summaries["test"]["rows"],
+        "train_first_transaction_id": split_summaries["train"]["first_transaction_id"],
+        "valid_first_transaction_id": split_summaries["validation"][
+            "first_transaction_id"
+        ],
+        "test_first_transaction_id": split_summaries["test"]["first_transaction_id"],
+        "train_last_transaction_id": split_summaries["train"]["last_transaction_id"],
+        "valid_last_transaction_id": split_summaries["validation"]["last_transaction_id"],
+        "test_last_transaction_id": split_summaries["test"]["last_transaction_id"],
+        "sort_order": LATENT_SPLIT_MANIFEST_SORT_ORDER,
+    }
+    save_json(summary, output_dir / LATENT_SPLIT_MANIFEST_JSON)
+
+
+def load_latent_split_manifest(autoencoder_output_dir: Path) -> pd.DataFrame:
+    """Load the AE latent split manifest saved during robust Autoencoder training."""
+    manifest_path = autoencoder_output_dir / LATENT_SPLIT_MANIFEST_CSV
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            "Missing latent split manifest:\n"
+            f"{manifest_path}\n"
+            "Re-run `python src/train_autoencoder_robust.py` for the matching "
+            "autoencoder output directory before training AE-LightGBM."
+        )
+    manifest_df = pd.read_csv(manifest_path)
+    required_columns = {"split", "row_position", ID_COL, TIME_COL, TARGET_COL}
+    missing_columns = sorted(required_columns - set(manifest_df.columns))
+    if missing_columns:
+        raise ValueError(
+            "Latent split manifest is missing required column(s): "
+            + ", ".join(missing_columns)
+        )
+    return manifest_df
+
+
+def validate_latent_split_manifest_alignment(
+    autoencoder_output_dir: Path,
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+) -> None:
+    """Fail fast when current split TransactionID order differs from AE latent manifest."""
+    manifest_df = load_latent_split_manifest(autoencoder_output_dir)
+    split_frames = {
+        "train": train_df,
+        "validation": valid_df,
+        "test": test_df,
+    }
+    for split_name, split_df in split_frames.items():
+        split_manifest = manifest_df.loc[
+            manifest_df["split"] == split_name
+        ].sort_values("row_position")
+        if len(split_manifest) != len(split_df):
+            raise ValueError(
+                f"{split_name} manifest row count {len(split_manifest)} does not match "
+                f"current split row count {len(split_df)} for "
+                f"{autoencoder_output_dir}."
+            )
+
+        expected_ids = split_manifest[ID_COL].to_numpy()
+        actual_ids = split_df[ID_COL].to_numpy()
+        if not np.array_equal(expected_ids, actual_ids):
+            mismatch_index = int(np.argmax(expected_ids != actual_ids))
+            raise ValueError(
+                f"{split_name} TransactionID order does not match latent manifest for "
+                f"{autoencoder_output_dir}. First mismatch at row {mismatch_index}: "
+                f"manifest={expected_ids[mismatch_index]!r}, "
+                f"current={actual_ids[mismatch_index]!r}. "
+                "Latent row i must align to split row i; rerun the matching "
+                "Autoencoder training or restore the frozen chronological split."
+            )
 
 
 def validate_latent_outputs(
@@ -324,6 +450,12 @@ def main(
         len(train_df),
         len(valid_df),
         len(test_df),
+    )
+    validate_latent_split_manifest_alignment(
+        autoencoder_output_dir,
+        train_df,
+        valid_df,
+        test_df,
     )
 
     log("Building non-V feature matrices and fitting train-only preprocessing.")

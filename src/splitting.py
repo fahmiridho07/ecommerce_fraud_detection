@@ -17,14 +17,30 @@ from config import (
 )
 from data_loader import validate_labeled_data, validate_required_columns
 
+# Duplicate TransactionDT values are expected in IEEE-CIS data.
+# TransactionID is used only as a deterministic tie-breaker for split ordering,
+# not as a model feature.
+CHRONOLOGICAL_SORT_ORDER_NOTE = (
+    "Events are ordered by TransactionDT ascending; duplicate TransactionDT "
+    "values are expected and TransactionID ascending is used only as a "
+    "deterministic tie-breaker, not as a model feature."
+)
+
 
 def sort_by_transaction_time(
     df: pd.DataFrame,
     time_col: str = TIME_COL,
+    id_col: str = ID_COL,
 ) -> pd.DataFrame:
-    """Sort labeled data by TransactionDT ascending."""
-    validate_required_columns(df, [time_col], "labeled data")
-    return df.sort_values(time_col, ascending=True).reset_index(drop=True)
+    """Sort labeled data by TransactionDT ascending, then TransactionID ascending.
+
+    Uses stable sorting so row order is deterministic when TransactionDT ties.
+    """
+    validate_required_columns(df, [time_col, id_col], "labeled data")
+    return (
+        df.sort_values([time_col, id_col], ascending=[True, True], kind="mergesort")
+        .reset_index(drop=True)
+    )
 
 
 def chronological_split(
@@ -34,7 +50,11 @@ def chronological_split(
     test_ratio: float = TEST_RATIO,
     time_col: str = TIME_COL,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Split data by time order into train, validation, and test sets."""
+    """Split data by deterministic event order into train, validation, and test sets.
+
+    Event ordering is TransactionDT ascending with TransactionID ascending as the
+    tie-breaker. See CHRONOLOGICAL_SORT_ORDER_NOTE.
+    """
     validate_labeled_data(df)
     if round(train_ratio + valid_ratio + test_ratio, 10) != 1.0:
         raise ValueError("train_ratio + valid_ratio + test_ratio must equal 1.0")

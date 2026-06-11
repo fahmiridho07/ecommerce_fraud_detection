@@ -93,6 +93,7 @@ from train_ae_lgbm import (
     split_non_v_features_target,
     validate_feature_alignment,
     validate_latent_outputs,
+    validate_latent_split_manifest_alignment,
 )
 from train_baseline_lgbm import (
     average_precision_eval,
@@ -407,7 +408,9 @@ def prepare_feature_engineered_lgbm_data() -> PreparedData:
     )
 
 
-def prepare_ae_lgbm_ld128_data() -> PreparedData:
+def prepare_ae_lgbm_ld128_data(
+    autoencoder_output_dir: Path = AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
+) -> PreparedData:
     """Build Phase 4B ld128 AE-LightGBM matrices."""
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
@@ -416,14 +419,17 @@ def prepare_ae_lgbm_ld128_data() -> PreparedData:
     train_df, valid_df, test_df = chronological_split(full_df)
     v_columns = get_v_feature_columns(train_df)
 
-    log("Loading robust Autoencoder latent_dim=128 features.")
+    log(
+        "Loading robust Autoencoder latent_dim=128 features from "
+        f"{autoencoder_output_dir}."
+    )
     (
         latent_train,
         latent_valid,
         latent_test,
         latent_feature_names,
         robust_ae_run_config,
-    ) = load_robust_latent_outputs(AUTOENCODER_ROBUST_LD128_OUTPUT_DIR)
+    ) = load_robust_latent_outputs(autoencoder_output_dir)
 
     validate_latent_outputs(
         latent_train,
@@ -439,6 +445,12 @@ def prepare_ae_lgbm_ld128_data() -> PreparedData:
             "Expected latent_dim=128 for ae_lgbm_ld128, but found "
             f"{latent_train.shape[1]} columns."
         )
+    validate_latent_split_manifest_alignment(
+        autoencoder_output_dir,
+        train_df,
+        valid_df,
+        test_df,
+    )
 
     log("Building non-V feature matrices.")
     X_train_non_v_raw, y_train = split_non_v_features_target(train_df, v_columns)
@@ -466,7 +478,7 @@ def prepare_ae_lgbm_ld128_data() -> PreparedData:
         "non_v_feature_count": int(X_train_non_v.shape[1]),
         "latent_feature_count": len(latent_feature_names),
         "total_feature_count": int(X_train.shape[1]),
-        "robust_autoencoder_output_dir": str(AUTOENCODER_ROBUST_LD128_OUTPUT_DIR),
+        "robust_autoencoder_output_dir": str(autoencoder_output_dir),
         "robust_autoencoder_clipping": {
             "enabled": robust_preprocessing.get("scaled_clipping_enabled"),
             "clip_min": robust_preprocessing.get("clip_min"),
@@ -606,13 +618,21 @@ def prepare_ae_augmented_lgbm_ld128_data() -> PreparedData:
     )
 
 
-def prepare_data(model_type: str) -> PreparedData:
+def prepare_data(
+    model_type: str,
+    autoencoder_output_dir: Path | None = None,
+) -> PreparedData:
     if model_type == "baseline_lgbm":
         return prepare_baseline_data()
     if model_type == FEATURE_ENGINEERED_MODEL_TYPE:
         return prepare_feature_engineered_lgbm_data()
     if model_type == "ae_lgbm_ld128":
-        return prepare_ae_lgbm_ld128_data()
+        resolved_autoencoder_output_dir = (
+            autoencoder_output_dir or AUTOENCODER_ROBUST_LD128_OUTPUT_DIR
+        )
+        return prepare_ae_lgbm_ld128_data(
+            autoencoder_output_dir=resolved_autoencoder_output_dir
+        )
     if model_type == "ae_augmented_lgbm_ld128":
         return prepare_ae_augmented_lgbm_ld128_data()
     raise ValueError(f"Unsupported model_type: {model_type}")
@@ -1296,7 +1316,10 @@ def run_tuning(args: argparse.Namespace) -> None:
         print_final_summary(table)
         return
 
-    prepared = prepare_data(args.model_type)
+    prepared = prepare_data(
+        args.model_type,
+        autoencoder_output_dir=args.autoencoder_output_dir,
+    )
 
     log("Creating/loading Optuna study.")
     study = create_or_load_study(args)
@@ -1475,11 +1498,28 @@ def parse_args() -> argparse.Namespace:
             "optuna_comparison.csv table."
         ),
     )
+    parser.add_argument(
+        "--autoencoder-output-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Robust LD128 Autoencoder output directory for model_type=ae_lgbm_ld128 "
+            f"only. Defaults to {AUTOENCODER_ROBUST_LD128_OUTPUT_DIR}."
+        ),
+    )
     args = parser.parse_args()
     if args.n_trials < 0:
         raise SystemExit("--n_trials must be zero or a positive integer.")
     if args.n_jobs == 0:
         raise SystemExit("--n_jobs must be non-zero.")
+    if (
+        args.autoencoder_output_dir is not None
+        and args.model_type != "ae_lgbm_ld128"
+    ):
+        raise SystemExit(
+            "--autoencoder-output-dir is only supported for "
+            "model_type=ae_lgbm_ld128."
+        )
     return args
 
 

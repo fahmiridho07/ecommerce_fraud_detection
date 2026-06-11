@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
+
 import joblib
 import pandas as pd
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -110,9 +113,12 @@ def save_feature_importance(model: lgb.LGBMClassifier, output_path) -> None:
     importance.to_csv(output_path, index=False)
 
 
-def main() -> None:
+def main(
+    output_dir: Path = BASELINE_OUTPUT_DIR,
+    phase_name: str = "2_baseline_lgbm",
+) -> dict[str, object]:
     set_seed(RANDOM_SEED)
-    output_dir = ensure_dir(BASELINE_OUTPUT_DIR)
+    output_dir = ensure_dir(output_dir)
 
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
@@ -221,7 +227,7 @@ def main() -> None:
     joblib.dump(preprocessing, output_dir / "preprocessing.pkl")
 
     run_config = {
-        "phase": "2_baseline_lgbm",
+        "phase": phase_name,
         "data_dir": str(DATA_DIR),
         "output_dir": str(output_dir),
         "sample_size": SAMPLE_SIZE,
@@ -281,6 +287,27 @@ def main() -> None:
     print(f"Best iteration    : {best_iteration}")
     print(f"Outputs saved to  : {output_dir}")
 
+    return {
+        "output_dir": str(output_dir),
+        "metrics_validation_selected": metrics_valid_selected,
+        "metrics_test_selected": metrics_test_selected,
+        "selected_threshold": selected_threshold,
+        "best_iteration": best_iteration,
+    }
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Train the Phase 2 baseline LightGBM model."
+    )
+    parser.add_argument("--output-dir", type=Path, default=BASELINE_OUTPUT_DIR)
+    parser.add_argument("--phase-name", default="2_baseline_lgbm")
+    return parser.parse_args()
+
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(
+        output_dir=args.output_dir,
+        phase_name=args.phase_name,
+    )
