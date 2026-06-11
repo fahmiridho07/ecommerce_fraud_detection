@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from build_ae_strategy_ablation_comparison import (  # noqa: E402
     OUT_OF_SCOPE_MODEL_NAMES,
     STRATEGY_CANDIDATES,
     build_ae_strategy_ablation_comparison_table,
+    comparison_row,
 )
 from train_ae_integration_strategy_ablation import (  # noqa: E402
     RECONSTRUCTION_ERROR_FEATURES,
@@ -24,6 +26,7 @@ from train_ae_integration_strategy_ablation import (  # noqa: E402
     reconstructed_v_feature_names,
     reconstruction_error_feature_names,
     requires_autoencoder_output_dir,
+    validate_v_columns_match_ae_run_config,
 )
 
 
@@ -79,3 +82,54 @@ def test_baseline_strategy_does_not_require_ae_output_dir() -> None:
 )
 def test_ae_strategies_require_ae_output_dir(variant: str) -> None:
     assert requires_autoencoder_output_dir(variant) is True
+
+
+def test_ding_v_column_mismatch_is_fail_fast_not_silent_fallback() -> None:
+    source = (SRC_DIR / "train_ae_integration_strategy_ablation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "v_columns = saved_v_columns" not in source
+
+    with pytest.raises(ValueError, match="V column scope mismatch"):
+        validate_v_columns_match_ae_run_config(
+            ["V1", "V2", "V3"],
+            ["V1", "V2", "V4"],
+            Path("outputs/ae_integration_strategy_ablation/autoencoder_robust_ld32"),
+        )
+
+
+def test_comparison_row_rejects_wrong_variant_family(tmp_path: Path) -> None:
+    output_dir = tmp_path / "wrong_variant_output"
+    output_dir.mkdir()
+
+    metrics_payload = {
+        "average_precision": 0.5,
+        "roc_auc": 0.5,
+        "threshold": 0.5,
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "mcc": 0.0,
+    }
+    (output_dir / "metrics_validation_selected_threshold.json").write_text(
+        '{"average_precision": 0.5, "roc_auc": 0.5}',
+        encoding="utf-8",
+    )
+    (output_dir / "metrics_test_selected_threshold.json").write_text(
+        json.dumps(metrics_payload),
+        encoding="utf-8",
+    )
+    (output_dir / "run_config.json").write_text(
+        json.dumps(
+            {
+                "experiment_family": "ae_integration_strategy_ablation",
+                "variant": "du_latent_replacement",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    candidate = STRATEGY_CANDIDATES[1]
+    row, missing = comparison_row(candidate, output_dir)
+    assert row is None
+    assert any("run_config variant/family mismatch" in message for message in missing)

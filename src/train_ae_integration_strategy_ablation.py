@@ -122,6 +122,69 @@ def reconstruction_error_feature_names() -> list[str]:
     return list(RECONSTRUCTION_ERROR_FEATURES)
 
 
+def validate_v_columns_match_ae_run_config(
+    current_v_columns: list[str],
+    saved_v_columns: list[str],
+    autoencoder_output_dir: Path,
+) -> None:
+    """Fail fast when AE run_config V scope does not match the current split."""
+    if saved_v_columns == current_v_columns:
+        return
+
+    current_set = set(current_v_columns)
+    saved_set = set(saved_v_columns)
+    missing_in_saved = sorted(current_set - saved_set)
+    extra_in_saved = sorted(saved_set - current_set)
+
+    positional_differences: list[str] = []
+    for index in range(min(len(current_v_columns), len(saved_v_columns))):
+        if current_v_columns[index] != saved_v_columns[index]:
+            positional_differences.append(
+                f"index {index}: current={current_v_columns[index]!r}, "
+                f"saved={saved_v_columns[index]!r}"
+            )
+
+    detail_parts: list[str] = []
+    if missing_in_saved:
+        detail_parts.append(
+            "missing in saved AE run_config: " + ", ".join(missing_in_saved[:10])
+        )
+    if extra_in_saved:
+        detail_parts.append(
+            "extra in saved AE run_config: " + ", ".join(extra_in_saved[:10])
+        )
+    if positional_differences:
+        detail_parts.append(
+            "positional differences: " + "; ".join(positional_differences[:5])
+        )
+
+    raise ValueError(
+        "V column scope mismatch between current chronological split and AE run_config: "
+        f"current V columns={len(current_v_columns)}, "
+        f"saved V columns={len(saved_v_columns)}, "
+        f"autoencoder_output_dir={autoencoder_output_dir}. "
+        + "; ".join(detail_parts)
+    )
+
+
+def load_ae_run_config_v_columns(autoencoder_output_dir: Path) -> list[str]:
+    """Load and validate the V column list stored in AE run_config.json."""
+    run_config_path = autoencoder_output_dir / "run_config.json"
+    if not run_config_path.exists():
+        raise FileNotFoundError(f"Missing AE run_config: {run_config_path}")
+
+    run_config = load_json(run_config_path)
+    if not isinstance(run_config, dict):
+        raise TypeError(f"Expected JSON object in {run_config_path}")
+
+    saved_v_columns = run_config.get("v_columns")
+    if not isinstance(saved_v_columns, list) or not saved_v_columns:
+        raise ValueError(
+            f"{run_config_path} is missing a non-empty v_columns list."
+        )
+    return saved_v_columns
+
+
 def apply_saved_v_preprocessing(
     df: pd.DataFrame,
     v_columns: list[str],
@@ -180,7 +243,7 @@ def load_saved_autoencoder_artifacts(
             f"{run_config_path} is missing a non-empty v_columns list."
         )
 
-    autoencoder = keras.models.load_model(model_path)
+    autoencoder = keras.models.load_model(model_path, compile=False)
     scaler = joblib.load(scaler_path)
     return autoencoder, scaler, run_config, v_columns
 
@@ -228,6 +291,13 @@ def load_or_compute_reconstruction_errors(
     v_columns: list[str],
 ) -> dict[str, np.ndarray]:
     """Load saved reconstruction-error CSVs or compute from frozen AE artifacts."""
+    saved_v_columns = load_ae_run_config_v_columns(autoencoder_output_dir)
+    validate_v_columns_match_ae_run_config(
+        v_columns,
+        saved_v_columns,
+        autoencoder_output_dir,
+    )
+
     paths = reconstruction_error_file_paths(autoencoder_output_dir)
     if all(path.exists() for path in paths.values()):
         return {
@@ -239,13 +309,9 @@ def load_or_compute_reconstruction_errors(
         "Reconstruction-error CSVs not found; computing from saved AE artifacts "
         "without fitting on validation/test."
     )
-    autoencoder, scaler, ae_run_config, saved_v_columns = load_saved_autoencoder_artifacts(
+    autoencoder, scaler, ae_run_config, _ = load_saved_autoencoder_artifacts(
         autoencoder_output_dir
     )
-    if saved_v_columns != v_columns:
-        raise ValueError(
-            "V column list from AE run_config does not match current split V columns."
-        )
 
     split_frames = {
         "train": train_df,
@@ -497,12 +563,16 @@ def build_ding_reconstructed_features(
             f"Supported: {SUPPORTED_RECONSTRUCTION_SPACES}"
         )
 
-    v_columns = get_v_feature_columns(train_df)
+    current_v_columns = get_v_feature_columns(train_df)
     autoencoder, scaler, ae_run_config, saved_v_columns = load_saved_autoencoder_artifacts(
         autoencoder_output_dir
     )
-    if saved_v_columns != v_columns:
-        v_columns = saved_v_columns
+    validate_v_columns_match_ae_run_config(
+        current_v_columns,
+        saved_v_columns,
+        autoencoder_output_dir,
+    )
+    v_columns = current_v_columns
 
     validate_latent_split_manifest_alignment(
         autoencoder_output_dir,

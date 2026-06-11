@@ -149,6 +149,32 @@ def required_artifact_paths(output_dir: Path) -> list[Path]:
     ]
 
 
+def validate_ablation_run_config(
+    run_config: dict[str, object],
+    candidate: dict[str, object],
+    run_config_path: Path,
+) -> str | None:
+    """Return an error message when run_config family/variant does not match candidate."""
+    expected_family = "ae_integration_strategy_ablation"
+    actual_family = run_config.get("experiment_family")
+    if actual_family != expected_family:
+        return (
+            "run_config variant/family mismatch: "
+            f"expected experiment_family={expected_family!r}, "
+            f"found {actual_family!r} ({run_config_path})"
+        )
+
+    expected_variant = candidate["variant"]
+    actual_variant = run_config.get("variant")
+    if actual_variant != expected_variant:
+        return (
+            "run_config variant/family mismatch: "
+            f"expected variant={expected_variant!r}, "
+            f"found {actual_variant!r} ({run_config_path})"
+        )
+    return None
+
+
 def comparison_row(
     candidate: dict[str, object],
     output_dir: Path,
@@ -163,6 +189,14 @@ def comparison_row(
     test_metrics_path = output_dir / "metrics_test_selected_threshold.json"
 
     run_config = load_json(run_config_path)
+    mismatch_message = validate_ablation_run_config(
+        run_config,
+        candidate,
+        run_config_path,
+    )
+    if mismatch_message:
+        return None, [mismatch_message]
+
     valid_metrics = load_json(valid_metrics_path)
     test_metrics = load_json(test_metrics_path)
 

@@ -121,6 +121,30 @@ def _check_autoencoder_output_dir_requirements() -> None:
     assert "is required for variant" in source
 
 
+def _check_ding_v_column_mismatch_is_fail_fast() -> None:
+    source = (SRC_DIR / "train_ae_integration_strategy_ablation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "v_columns = saved_v_columns" not in source
+    assert "validate_v_columns_match_ae_run_config" in source
+
+
+def _check_keras_load_uses_compile_false() -> None:
+    source = (SRC_DIR / "train_ae_integration_strategy_ablation.py").read_text(
+        encoding="utf-8"
+    )
+    assert "compile=False" in source
+
+
+def _check_comparison_builder_run_config_guards() -> None:
+    source = (SRC_DIR / "build_ae_strategy_ablation_comparison.py").read_text(
+        encoding="utf-8"
+    )
+    assert "experiment_family" in source
+    assert 'run_config.get("variant")' in source or 'run_config["variant"]' in source
+    assert "validate_ablation_run_config" in source
+
+
 def _check_guide_command_order() -> None:
     guide = (SRC_DIR.parent / "docs" / "AE_INTEGRATION_STRATEGY_ABLATION.md").read_text(
         encoding="utf-8"
@@ -144,6 +168,9 @@ def main() -> None:
         _check_reconstruction_error_features,
         _check_comparison_scope,
         _check_autoencoder_output_dir_requirements,
+        _check_ding_v_column_mismatch_is_fail_fast,
+        _check_keras_load_uses_compile_false,
+        _check_comparison_builder_run_config_guards,
         _check_guide_command_order,
     ]
     for check in checks:
