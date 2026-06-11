@@ -81,6 +81,8 @@ Grouped reconstruction error, behavioral features, causal features, CDV AE, task
 
 The 2026-06-11 fixed/default LightGBM + AE LD32 run is summarized in [`AE_INTEGRATION_STRATEGY_ABLATION_RESULTS.md`](AE_INTEGRATION_STRATEGY_ABLATION_RESULTS.md).
 
+LD128 ablation found STR-AE3 (`reconstruction_error_augmentation`) as the only strategy above fixed/default baseline. Optuna tuning for TUNE-B0 and TUNE-AE3 is documented in [`AE_STRATEGY_TUNING_PLAN.md`](AE_STRATEGY_TUNING_PLAN.md).
+
 ## Recommended command order
 
 Run validation first, then train the shared V-only Autoencoder, then each LightGBM strategy, then build the comparison table.
