@@ -96,6 +96,10 @@ python src/build_ae_strategy_tuned_comparison.py \
 --base-output-dir outputs/ae_integration_strategy_ablation_ld128/optuna
 ```
 
+## Completed results
+
+The 2026-06-11 LD32/LD128 ablation and Optuna tuning runs are summarized in [`AE_STRATEGY_TUNING_RESULTS.md`](AE_STRATEGY_TUNING_RESULTS.md).
+
 ## Related documents
 
 - [`AE_INTEGRATION_STRATEGY_ABLATION.md`](AE_INTEGRATION_STRATEGY_ABLATION.md) — fixed/default ablation protocol
