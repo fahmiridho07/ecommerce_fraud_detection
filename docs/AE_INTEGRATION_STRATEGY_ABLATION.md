@@ -77,6 +77,10 @@ The **only** intended difference between STR-B0, STR-AE1, STR-AE2, and STR-AE3 i
 
 Grouped reconstruction error, behavioral features, causal features, CDV AE, task-aware AE, static FE branches, late fusion, score ensembles, and Optuna tuning are **out of scope** for this phase.
 
+## Completed results
+
+The 2026-06-11 fixed/default LightGBM + AE LD32 run is summarized in [`AE_INTEGRATION_STRATEGY_ABLATION_RESULTS.md`](AE_INTEGRATION_STRATEGY_ABLATION_RESULTS.md).
+
 ## Recommended command order
 
 Run validation first, then train the shared V-only Autoencoder, then each LightGBM strategy, then build the comparison table.
