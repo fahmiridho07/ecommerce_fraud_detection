@@ -12,7 +12,6 @@ comparable_to_thesis: "partial"
 thesis_use: "Bab 2 — AE+LightGBM tanpa fokus resampling"
 bab: "2"
 pdf: "../../2. Reference/05_Integrasi_Autoencoder_LightGBM/Du_2023_AutoEncoder_and_LightGBM_Fraud_Detection.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Du_2023_AutoEncoder_and_LightGBM_Fraud_Detection.md"
 ---
 
 # Du et al. (2023)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Du
 
 ## File
 
-- PDF: `2. Reference/05_Integrasi_Autoencoder_LightGBM/Du_2023_AutoEncoder_and_LightGBM_Fraud_Detection.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Du_2023_AutoEncoder_and_LightGBM_Fraud_Detection.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/05_Integrasi_Autoencoder_LightGBM/Du_2023_AutoEncoder_and_LightGBM_Fraud_Detection.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

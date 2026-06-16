@@ -12,7 +12,6 @@ comparable_to_thesis: "partial"
 thesis_use: "Bab 2 — precedent AE latent → booster di IEEE-CIS"
 bab: "2"
 pdf: "../../2. Reference/05_Integrasi_Autoencoder_LightGBM/Prabha_Priscilla_2024_LSTMAE_XGBoost_IEEE-CIS.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Prabha_Priscilla_2024_LSTMAE_XGBoost_IEEE-CIS.md"
 ---
 
 # Prabha & Priscilla (2024)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Pr
 
 ## File
 
-- PDF: `2. Reference/05_Integrasi_Autoencoder_LightGBM/Prabha_Priscilla_2024_LSTMAE_XGBoost_IEEE-CIS.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Prabha_Priscilla_2024_LSTMAE_XGBoost_IEEE-CIS.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/05_Integrasi_Autoencoder_LightGBM/Prabha_Priscilla_2024_LSTMAE_XGBoost_IEEE-CIS.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

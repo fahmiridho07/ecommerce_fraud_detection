@@ -1,9 +1,9 @@
 # Literature Index (Repo)
 
-Kartu ringkas ada di `cards/`. Deep research ada di `deep-research/`.
+Kartu ringkas ada di `cards/`. Deep research ada di `deep-research/`. **PDF** di `../../../2. Reference/` adalah source of truth untuk angka dan kutipan (OCR full-text dihapus).
 
 - **Salinan indeks lengkap (55 referensi):** [`LITERATURE_INDEX.md`](LITERATURE_INDEX.md)
-- **Master di parent:** [`../../../5. Reference (MarkDown)/LITERATURE_INDEX.md`](../../../5.%20Reference%20(MarkDown)/LITERATURE_INDEX.md)
+- **Master di parent:** [`../../../5. Literature Cards/LITERATURE_INDEX.md`](../../../5.%20Literature%20Cards/LITERATURE_INDEX.md)
 
 Sync dari parent: `python scripts/sync_literature.py`
 

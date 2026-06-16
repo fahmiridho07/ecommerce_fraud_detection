@@ -8,6 +8,7 @@ This directory is now intentionally narrow. It contains only the active proposal
 - `data_loader.py` - IEEE-CIS train data loading.
 - `splitting.py` - chronological split helpers.
 - `preprocessing.py` - feature/target preparation and categorical preprocessing.
+- `enhanced_preprocessing.py` - isolated preprocessing ablation helpers for identity/device normalization and rare-category bucketing.
 - `evaluation.py` - AP, ROC-AUC, threshold, and confusion-matrix metrics.
 - `utils.py` - JSON, logging, seed, and filesystem helpers.
 
@@ -24,6 +25,7 @@ This directory is now intentionally narrow. It contains only the active proposal
 - `build_extended_proposal_comparison.py` - builds P01-P04 plus AE-05 extended comparison.
 - `generate_initial_proposal_diagnostics.py` - in-depth diagnostics from saved P01-P04 artifacts (missingness signal, V gain share, AE drift).
 - `generate_preprocessing_diagnostics.py` - preprocessing-only diagnostics for split composition, missingness drift, categorical unseen rates, and numeric distribution shift.
+- `train_enhanced_preprocessing_lgbm.py` - runs enhanced preprocessing ablations for the tuned baseline and AE-05 candidate.
 - `build_representation_ablation_comparison.py` - compares P01, P03, and hybrid top-V AE runs.
 - `run_top_v_retention_sweep.py` - sweeps top-K retained `V*` hybrid models.
 - `build_significance_comparison.py` - canonical P01-P04 vs hybrid significance table.

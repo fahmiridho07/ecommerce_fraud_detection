@@ -12,7 +12,6 @@ comparable_to_thesis: "partial"
 thesis_use: "Bab 2 — LightGBM benchmark IEEE-CIS"
 bab: "2"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Bakhtiari_2023_LightGBM_Ensemble_IEEE-CIS.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Bakhtiari_2023_LightGBM_Ensemble_IEEE-CIS.md"
 ---
 
 # Bakhtiari et al. (2023)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Bakhtiari_2023_L
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Bakhtiari_2023_LightGBM_Ensemble_IEEE-CIS.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Bakhtiari_2023_LightGBM_Ensemble_IEEE-CIS.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Bakhtiari_2023_LightGBM_Ensemble_IEEE-CIS.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

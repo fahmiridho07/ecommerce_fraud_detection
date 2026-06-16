@@ -12,7 +12,6 @@ comparable_to_thesis: "partial"
 thesis_use: "Bab 2 — anchor replikasi IEEE-CIS"
 bab: "2"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.md"
 ---
 
 # Nguyen et al. (2022)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Nguyen_2022_Card
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

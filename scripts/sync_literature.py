@@ -12,8 +12,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = REPO_ROOT.parent
 
 SOURCES = {
-    "cards": WORKSPACE_ROOT / "5. Reference (MarkDown)" / "_cards",
-    "index": WORKSPACE_ROOT / "5. Reference (MarkDown)" / "LITERATURE_INDEX.md",
+    "cards": WORKSPACE_ROOT / "5. Literature Cards" / "_cards",
+    "index": WORKSPACE_ROOT / "5. Literature Cards" / "LITERATURE_INDEX.md",
     "deep_research": WORKSPACE_ROOT / "4. Deep Research",
 }
 

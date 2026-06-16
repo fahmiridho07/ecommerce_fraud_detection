@@ -183,6 +183,40 @@ Top gain features in AE-05:
 
 Interpretation: AE-05 is the first post-cleanup AE candidate that beats the tuned raw-feature LightGBM baseline on test PR-AUC with a positive bootstrap interval. It should replace "AE cannot beat P02" as the active engineering conclusion, but keep P01-P04 as the canonical historical proposal rerun unless the thesis narrative is intentionally updated to include this post-diagnostic candidate.
 
+## Preprocessing Ablation: Enhanced Identity/Device Normalization
+
+The preprocessing diagnostic found strong categorical drift, especially `id_31` unseen categories among observed rows. A focused preprocessing ablation was added without changing the canonical P01-P04 scripts:
+
+- normalize `id_31` into browser family and major version;
+- normalize `id_30` into OS family and major version;
+- parse `id_33` into screen dimensions and bucket;
+- normalize `DeviceInfo` into device family;
+- apply train-fitted rare-category bucketing (`rare_min_count=50`);
+- keep numeric `NaN` values for LightGBM native missing handling.
+
+Commands:
+
+```bash
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_enhanced_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type ae05 \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/ae05_enhanced_fixed_ae05
+```
+
+Results:
+
+| Model | Val AP | Test AP | ROC-AUC | F1 | MCC | Features |
+|-------|-------:|--------:|--------:|---:|----:|---------:|
+| P02 tuned baseline | 0.631767 | 0.504900 | 0.883431 | 0.493865 | 0.494270 | 432 |
+| AE-05 hybrid reconstruction | 0.626124 | 0.509821 | 0.882011 | 0.504766 | 0.512071 | 466 |
+| Enhanced baseline, fixed P02 params | **0.643247** | **0.516590** | **0.895311** | 0.503787 | 0.504735 | 438 |
+| Enhanced AE-05, fixed AE-05 params | 0.631194 | 0.514975 | 0.889967 | **0.518194** | **0.514024** | 472 |
+
+Interpretation: enhanced preprocessing improves both supervised baseline and AE-05. The best PR-AUC is now the enhanced baseline, while enhanced AE-05 gives the best thresholded F1/MCC. This shifts the next research question from "can AE beat the old P02?" to "can AE beat a preprocessing-strengthened baseline under matched tuning?"
+
 ## Reconstruction-Error Augmentation (Post-Fix, Not P01-P04)
 
 Archive review showed that AE reconstruction error was the strongest historical AE integration path. This post-fix rerun keeps all original baseline features and appends only two LD128 Autoencoder anomaly features from `outputs/initial_proposal/autoencoder_robust_ld128/`:

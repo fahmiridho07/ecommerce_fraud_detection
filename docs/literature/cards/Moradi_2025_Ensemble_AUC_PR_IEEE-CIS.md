@@ -12,7 +12,6 @@ comparable_to_thesis: "no"
 thesis_use: "Bab 2 related work; Bab 5 — bandingkan protokol, bukan angka"
 bab: "2,5"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.md"
 ---
 
 # Moradi et al. (2025)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Moradi_2025_Ense
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

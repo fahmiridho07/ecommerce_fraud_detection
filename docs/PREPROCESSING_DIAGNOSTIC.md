@@ -123,3 +123,46 @@ Rationale: AE-05 shows reconstruction error is valuable, but the AE input repres
 - Do not fit encoders, rare buckets, scalers, or imputers on validation/test.
 - Do not silently replace the AE-05 result with broad feature-engineering branches; each preprocessing family should be ablated independently.
 - Keep P02 tuned baseline and AE-05 as the main comparison pair for preprocessing experiments.
+
+## Executed Ablation: Enhanced Identity/Device Preprocessing
+
+Implemented in `src/enhanced_preprocessing.py` and `src/train_enhanced_preprocessing_lgbm.py`.
+
+Changes:
+
+- `id_31` -> browser family + major version, raw `id_31` dropped.
+- `id_30` -> OS family + major version, raw `id_30` dropped.
+- `id_33` -> screen width, height, area, aspect ratio, and size bucket, raw `id_33` dropped.
+- `DeviceInfo` -> device family, raw `DeviceInfo` dropped.
+- train-fitted rare-category bucketing with `rare_min_count=50`.
+- numeric missing values remain `NaN` for LightGBM native missing handling.
+
+Commands:
+
+```bash
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_enhanced_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type ae05 \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/ae05_enhanced_fixed_ae05
+```
+
+Comparison output: `outputs/initial_proposal/preprocessing_ablation/preprocessing_ablation_comparison.csv`.
+
+Results:
+
+| Model | Val AP | Test AP | ROC-AUC | F1 | MCC | Features |
+|-------|-------:|--------:|--------:|---:|----:|---------:|
+| P02 tuned baseline | 0.631767 | 0.504900 | 0.883431 | 0.493865 | 0.494270 | 432 |
+| AE-05 hybrid reconstruction | 0.626124 | 0.509821 | 0.882011 | 0.504766 | 0.512071 | 466 |
+| Enhanced baseline, fixed P02 params | **0.643247** | **0.516590** | **0.895311** | 0.503787 | 0.504735 | 438 |
+| Enhanced AE-05, fixed AE-05 params | 0.631194 | 0.514975 | 0.889967 | **0.518194** | **0.514024** | 472 |
+
+Interpretation:
+
+- The preprocessing hypothesis is confirmed: identity/device normalization and rare bucketing improve both the tuned baseline and AE-05.
+- Enhanced baseline has the best PR-AUC/ranking quality.
+- Enhanced AE-05 has the best thresholded F1 and MCC, meaning the AE reconstruction signal still helps classification behavior after threshold selection.
+- Because the enhanced baseline now exceeds enhanced AE-05 on PR-AUC, the next fair step is either tune both enhanced variants under the same Optuna budget or refine AE-specific preprocessing while keeping enhanced categorical preprocessing fixed.

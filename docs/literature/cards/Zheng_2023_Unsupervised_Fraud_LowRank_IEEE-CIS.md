@@ -12,7 +12,6 @@ comparable_to_thesis: "no"
 thesis_use: "Bab 2 — unsupervised PR-AUC rendah"
 bab: "2"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Zheng_2023_Unsupervised_Fraud_LowRank_IEEE-CIS.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Zheng_2023_Unsupervised_Fraud_LowRank_IEEE-CIS.md"
 ---
 
 # Zheng et al. (2023)
@@ -23,7 +22,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Zheng_2023_Unsup
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Zheng_2023_Unsupervised_Fraud_LowRank_IEEE-CIS.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Zheng_2023_Unsupervised_Fraud_LowRank_IEEE-CIS.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Zheng_2023_Unsupervised_Fraud_LowRank_IEEE-CIS.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

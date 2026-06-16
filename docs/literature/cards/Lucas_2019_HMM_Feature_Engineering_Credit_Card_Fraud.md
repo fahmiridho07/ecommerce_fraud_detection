@@ -12,7 +12,6 @@ comparable_to_thesis: "future-work"
 thesis_use: "Bab 2/5 — feature temporal di luar scope P01-P04"
 bab: "2,5"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Lucas_2019_HMM_Feature_Engineering_Credit_Card_Fraud.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Lucas_2019_HMM_Feature_Engineering_Credit_Card_Fraud.md"
 ---
 
 # Lucas et al. (2019)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Lucas_2019_HMM_F
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Lucas_2019_HMM_Feature_Engineering_Credit_Card_Fraud.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Lucas_2019_HMM_Feature_Engineering_Credit_Card_Fraud.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Lucas_2019_HMM_Feature_Engineering_Credit_Card_Fraud.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

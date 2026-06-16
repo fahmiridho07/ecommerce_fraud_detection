@@ -12,7 +12,6 @@ comparable_to_thesis: "theory"
 thesis_use: "Bab 2 — dasar teori LightGBM (GOSS, EFB, leaf-wise)"
 bab: "2"
 pdf: "../../2. Reference/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.md"
 ---
 
 # Ke et al. (2017)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/04_LightGBM/LightGBM A Highly Effici
 
 ## File
 
-- PDF: `2. Reference/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

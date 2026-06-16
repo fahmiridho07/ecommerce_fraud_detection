@@ -12,7 +12,6 @@ comparable_to_thesis: "metrics"
 thesis_use: "Bab 2/3 — interpretasi PR-AUC, baseline prevalence"
 bab: "2,3"
 pdf: "../../2. Reference/07_Metrik_Evaluasi/Williams_2021_Effect_Class_Imbalance_Precision_Recall_Curves.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/07_Metrik_Evaluasi/Williams_2021_Effect_Class_Imbalance_Precision_Recall_Curves.md"
 ---
 
 # Williams (2021)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/07_Metrik_Evaluasi/Williams_2021_Eff
 
 ## File
 
-- PDF: `2. Reference/07_Metrik_Evaluasi/Williams_2021_Effect_Class_Imbalance_Precision_Recall_Curves.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/07_Metrik_Evaluasi/Williams_2021_Effect_Class_Imbalance_Precision_Recall_Curves.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/07_Metrik_Evaluasi/Williams_2021_Effect_Class_Imbalance_Precision_Recall_Curves.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

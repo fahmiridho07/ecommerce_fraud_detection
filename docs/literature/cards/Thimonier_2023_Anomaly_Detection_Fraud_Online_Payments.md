@@ -12,7 +12,6 @@ comparable_to_thesis: "discussion"
 thesis_use: "Bab 5 — LGBM kuat tapi sensitif shift"
 bab: "5"
 pdf: "../../2. Reference/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.md"
 ---
 
 # Thimonier et al. (2023)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Thimo
 
 ## File
 
-- PDF: `2. Reference/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

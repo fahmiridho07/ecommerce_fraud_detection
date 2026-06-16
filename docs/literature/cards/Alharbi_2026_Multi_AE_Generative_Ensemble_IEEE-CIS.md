@@ -12,7 +12,6 @@ comparable_to_thesis: "no"
 thesis_use: "Bab 2 — state-of-the-art AE family di IEEE-CIS"
 bab: "2"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.md"
 ---
 
 # Alharbi et al. (2026)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Alharbi_2026_Mul
 
 ## File
 
-- PDF: `2. Reference/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

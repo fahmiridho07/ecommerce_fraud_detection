@@ -12,7 +12,6 @@ comparable_to_thesis: "partial"
 thesis_use: "Bab 2 — precedent arsitektur AE+LightGBM"
 bab: "2"
 pdf: "../../2. Reference/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.md"
 ---
 
 # Ding et al. (2024)
@@ -25,7 +24,5 @@ fulltext_md: "../../5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Di
 
 ## File
 
-- PDF: `2. Reference/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

@@ -17,6 +17,6 @@ source: "../../ecommerce_fraud_detection/docs/EXPERIMENT_REGISTRY.md"
 
 ## Ringkasan
 
-- P02 tuned LightGBM test AP 0.5049 > P04 0.4845 > P01 0.4858 > P03 0.4802.
-- AE tidak mengalahkan baseline setelah missingness-preserving fix.
-- Lihat ecommerce_fraud_detection/docs/EXPERIMENT_REGISTRY.md.
+- P02 tuned LightGBM test AP 0.5049 > P01 0.4858 > P04 0.4845 > P03 0.4802.
+- Di blok proposal ini, AE latent replacement tidak mengalahkan P02.
+- Kandidat aktif **AE-05** (0.5098) ada di `EXPERIMENT_REGISTRY.md` — blok terpisah, jangan campur dengan tabel P01–P04.

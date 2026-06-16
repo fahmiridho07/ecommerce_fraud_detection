@@ -12,7 +12,6 @@ comparable_to_thesis: "discussion"
 thesis_use: "Bab 5 — AE sebagai representasi, bukan detector akhir"
 bab: "5"
 pdf: "../../2. Reference/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.md"
 ---
 
 # Niu et al. (2019)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/03_Autoencoder/Niu_2019_Supervised_v
 
 ## File
 
-- PDF: `2. Reference/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

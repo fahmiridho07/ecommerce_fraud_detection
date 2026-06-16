@@ -12,7 +12,6 @@ comparable_to_thesis: "protocol"
 thesis_use: "Bab 3 — protokol tanpa leakage"
 bab: "3"
 pdf: "../../2. Reference/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.md"
 ---
 
 # Kabane & Ouali (2024)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/02_Ketidakseimbangan_Kelas/Kabane_20
 
 ## File
 
-- PDF: `2. Reference/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

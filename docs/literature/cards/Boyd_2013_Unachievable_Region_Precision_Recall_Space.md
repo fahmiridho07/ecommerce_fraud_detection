@@ -12,7 +12,6 @@ comparable_to_thesis: "metrics"
 thesis_use: "Bab 2 — pendukung evaluasi PR"
 bab: "2"
 pdf: "../../2. Reference/07_Metrik_Evaluasi/Boyd_2013_Unachievable_Region_Precision_Recall_Space.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/07_Metrik_Evaluasi/Boyd_2013_Unachievable_Region_Precision_Recall_Space.md"
 ---
 
 # Boyd et al. (2013)
@@ -23,7 +22,5 @@ fulltext_md: "../../5. Reference (MarkDown)/07_Metrik_Evaluasi/Boyd_2013_Unachie
 
 ## File
 
-- PDF: `2. Reference/07_Metrik_Evaluasi/Boyd_2013_Unachievable_Region_Precision_Recall_Space.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/07_Metrik_Evaluasi/Boyd_2013_Unachievable_Region_Precision_Recall_Space.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/07_Metrik_Evaluasi/Boyd_2013_Unachievable_Region_Precision_Recall_Space.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

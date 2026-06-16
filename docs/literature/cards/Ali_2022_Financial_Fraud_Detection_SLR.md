@@ -12,7 +12,6 @@ comparable_to_thesis: "background"
 thesis_use: "Bab 2 — SLR latar belakang"
 bab: "2"
 pdf: "../../2. Reference/01_Deteksi_Penipuan_E-Commerce/Ali_2022_Financial_Fraud_Detection_SLR.pdf"
-fulltext_md: "../../5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Ali_2022_Financial_Fraud_Detection_SLR.md"
 ---
 
 # Ali et al. (2022)
@@ -24,7 +23,5 @@ fulltext_md: "../../5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Ali_2
 
 ## File
 
-- PDF: `2. Reference/01_Deteksi_Penipuan_E-Commerce/Ali_2022_Financial_Fraud_Detection_SLR.pdf`
-- Full-text MD (OCR): `5. Reference (MarkDown)/01_Deteksi_Penipuan_E-Commerce/Ali_2022_Financial_Fraud_Detection_SLR.md`
-
-> Full-text MD adalah ekstrak OCR — verifikasi angka penting ke PDF.
+- PDF (source of truth): `2. Reference/01_Deteksi_Penipuan_E-Commerce/Ali_2022_Financial_Fraud_Detection_SLR.pdf`
+- Kartu ini untuk ringkasan; verifikasi angka/kutipan ke PDF.

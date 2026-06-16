@@ -80,7 +80,7 @@ The cleaned repository does not promote behavioral features, late fusion, featur
 
 ## Literature & thesis materials
 
-Thesis PDFs and OCR markdown live **one level up** from this repo. Agent-friendly copies are synced into `docs/literature/`.
+Thesis PDFs and literature cards live **one level up** from this repo. Agent-friendly copies are synced into `docs/literature/`. PDF is the source of truth for citations.
 
 - [`docs/literature/INDEX.md`](docs/literature/INDEX.md)
 - [`docs/literature/PROJECT_LAYOUT.md`](docs/literature/PROJECT_LAYOUT.md)

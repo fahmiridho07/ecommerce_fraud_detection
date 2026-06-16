@@ -11,7 +11,7 @@ Workspace root: `1_TugasAkhir/` (buka folder ini di Cursor untuk konteks penuh).
 | `AGENTS.md` (workspace root, lokal) | Instruksi baca untuk AI agent — tidak di-push |
 | `ecommerce_fraud_detection/scripts/sync_literature.py` | Sync cards + index + deep-research dari parent |
 | `../../2. Reference/` | PDF resmi sidang (master) |
-| `../../5. Reference (MarkDown)/` | Full-text OCR + `_cards/` + `LITERATURE_INDEX.md` (master) |
+| `../../5. Literature Cards/` | Kartu `_cards/` + `LITERATURE_INDEX.md` (master) |
 | `../../4. Deep Research/` | Laporan sintesis (5 file, master) |
 | `../../0. Skripsi/proposal/Draft_ProposalTA.docx` | Proposal (canonical) |
 | `../../0. Skripsi/skripsi/TA_Achmad Fahmi Ainur Ridho_2026.docx` | Skripsi (canonical) |
@@ -23,4 +23,4 @@ Workspace root: `1_TugasAkhir/` (buka folder ini di Cursor untuk konteks penuh).
 2. `docs/THESIS_SCOPE.md`
 3. `docs/EXPERIMENT_REGISTRY.md`
 4. `docs/literature/INDEX.md` → `cards/` → `deep-research/`
-5. Full-text hanya jika perlu detail — `../../5. Reference (MarkDown)/`
+5. Verifikasi angka/kutipan — PDF di `../../2. Reference/`
