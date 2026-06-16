@@ -108,6 +108,21 @@ Flat `src/` layout uses same-directory imports (`from config import …`). **Phy
 
 ---
 
+## Active WIP dependency chain
+
+### `src/gbdt_backends.py` and GBDT comparison scripts
+
+| Dependency type | Files / paths |
+|-----------------|---------------|
+| Local imports | `config`, `preprocessing`, `tune_lgbm_optuna`; GBDT runners also import `data_loader`, `evaluation`, `splitting`, `train_ae_integration_strategy_ablation`, `train_gbdt_ae3_integration`, `utils` |
+| Reads | `data/raw/`; optional `outputs/ae_integration_strategy_ablation_ld128/autoencoder_robust_ld128` for AE3 |
+| Writes | `outputs/gbdt_baseline_comparison/` |
+| Move safe? | **No** — WIP is internally consistent but still uses flat same-directory imports |
+
+This WIP branch is isolated from FUS-01 / LF01. Do not move or package it before the GBDT comparison table and decision gate are complete.
+
+---
+
 ## Shared core modules (all active paths)
 
 ```text

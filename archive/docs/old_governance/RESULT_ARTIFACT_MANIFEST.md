@@ -16,6 +16,8 @@ See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md).
 
 **Exclusions (do not track):** model binaries, `.pkl`, `.keras`, latent `.npy`, `oof_scores.csv`, prediction/score CSVs, Optuna `study.db`, raw data, full `outputs/` trees.
 
+**Active WIP caution:** `outputs/gbdt_baseline_comparison/` is incomplete WIP. Do not add it to the Git allow-list until `comparison.csv`, `decision_gate.json`, and any supervisor-approved thesis-facing summaries exist. Model binaries, backend-native model files, and Optuna databases remain excluded.
+
 ## Primary model artifacts
 
 | Artifact | Purpose | Size (approx.) | Track recommendation | Reason |

@@ -10,9 +10,10 @@ Keep all current file paths unchanged. Use experiment maps, cleanup audits, and 
 |--------|---------|
 | Import coupling | `late_fusion_experts.py` imports `train_ae_lgbm`, `train_causal_behavioral_lgbm`, `causal_behavioral_features` |
 | Optuna coupling | `tune_lgbm_optuna.py` imports `train_ae_augmented_lgbm`, `feature_engineering` |
-| Flat `src/` convention | All 76 scripts use same-directory imports (`from config import …`) |
+| Flat `src/` convention | All 90 current scripts use same-directory imports (`from config import ...`) |
 | Movement cost | Any folder move requires updating dozens of imports + docs + `run_config.json` lineage references |
 | Risk | Physical refactor adds breakage risk without improving thesis reproducibility |
+| Active WIP | GBDT comparison files are isolated but not yet complete; moving them now would add churn before the decision gate exists |
 
 See [`docs/IMPORT_DEPENDENCY_AUDIT.md`](IMPORT_DEPENDENCY_AUDIT.md) for per-script dependency detail.
 
@@ -48,6 +49,8 @@ Current tracked files (~5) are appropriate:
 
 ### `src/` — flat layout preserved
 
+Add and maintain `src/README.md` as the navigation layer for script groups. This gives the tree a map without changing import paths.
+
 Proposed future layout (from `docs/FINAL_EXPERIMENT_PLAN.md`) remains **not executed**:
 
 ```text
@@ -57,6 +60,10 @@ src/legacy/        # FE, ensemble, AE15
 ```
 
 Defer until import audit + migration plan approved.
+
+### GBDT WIP — isolated, not promoted
+
+`docs/GBDT_BASELINE_COMPARISON_PLAN.md` and `src/*gbdt*` files define an active WIP shootout between LightGBM, XGBoost, and CatBoost. Keep it isolated under `outputs/gbdt_baseline_comparison/` and do not add it to the active thesis path unless the comparison table and decision gate are complete and explicitly approved.
 
 ### `docs/` — canonical navigation layer
 

@@ -1,7 +1,7 @@
 # Repository Cleanup Audit
 
-**Audit date:** 2026-06-11  
-**Scope:** Git-tracked files under `src/`, `docs/`, `results/`, `tests/`, and root project files. Local `outputs/` inspected by path reference only (gitignored).  
+**Audit date:** 2026-06-11; refreshed 2026-06-16  
+**Scope:** Git-tracked files under `src/`, `docs/`, `results/`, `tests/`, and root project files, plus active untracked GBDT WIP files. Local `outputs/` inspected by path reference only (gitignored).  
 **Thesis candidate:** FUS-01 / LF01 (BEH-01 / CBA01R + AE-02 / P04 late fusion).
 
 > **High AP alone is insufficient for final-model promotion** when the branch has weaker governance, static/non-causal feature construction, test-inspection risk, or incomplete reproducibility.
@@ -15,16 +15,19 @@
 | ACTIVE_REFERENCE | 2 |
 | ACTIVE_EXPERT | 4 |
 | THESIS_CANDIDATE | 4 |
-| ABLATION_EVIDENCE | 11 |
-| DIAGNOSTIC_AUDIT | 26 |
+| ABLATION_EVIDENCE | 13 |
+| DIAGNOSTIC_AUDIT | 32 |
 | DIAGNOSTIC_APPENDIX | 1 |
 | LEGACY_ARCHIVE_CANDIDATE | 20 |
+| ACTIVE_WIP_GBDT | 6 |
 | PROVISIONAL_SUPERSEDED | 0* |
 | DELETE_CANDIDATE | 0 |
 
 \*Provisional superseded behavior is covered by dual-mode scripts (`train_causal_behavioral_lgbm.py`, `train_causal_behavioral_cdv_reconstruction_lgbm.py`) classified under ACTIVE_EXPERT / ABLATION with legacy notes—not standalone files.
 
-**Total `src/*.py` audited:** 76
+**Total `src/*.py` audited:** 90
+
+**2026-06-16 refresh note:** the original 76-script audit remains valid for the frozen FUS-01 thesis path. Fourteen later scripts are now classified without changing active thesis conclusions: AE strategy ablation/tuning support, initial-proposal rerun guards, and isolated GBDT WIP.
 
 ---
 
@@ -37,6 +40,37 @@
 | AE-02 | P04 | `src/train_autoencoder_robust.py`, `src/train_ae_lgbm.py`, `src/tune_lgbm_optuna.py` |
 | BEH-01 | CBA01R | `src/causal_behavioral_features.py`, `src/train_causal_behavioral_lgbm.py` |
 | FUS-01 | LF01 | `src/late_fusion_experts.py`, `src/run_causal_behavioral_ae_late_fusion.py`, `src/audit_causal_behavioral_ae_complementarity.py` |
+
+---
+
+## Protected active WIP (not thesis-candidate evidence)
+
+| WIP branch | Status | Key scripts | Output path | Cleanup rule |
+|------------|--------|-------------|-------------|--------------|
+| GBDT baseline comparison | Active WIP / isolated | `src/gbdt_backends.py`, `src/train_gbdt_baseline.py`, `src/tune_gbdt_baseline.py`, `src/train_gbdt_ae3_integration.py`, `src/build_gbdt_baseline_comparison.py`, `src/_validate_gbdt_baseline_pipeline.py` | `outputs/gbdt_baseline_comparison/` | Keep together; do not promote to active thesis path until comparison + decision gate are complete |
+
+GBDT WIP currently does not alter BASE-01, BASE-02, AE-02, BEH-01, or FUS-01. Its artifacts remain under gitignored `outputs/`.
+
+---
+
+## 2026-06-16 additional script classifications
+
+| Path | Classification | Short reason | Recommended action |
+|------|----------------|--------------|-------------------|
+| `src/train_ae_integration_strategy_ablation.py` | ABLATION_EVIDENCE | STR-B0..STR-AE3 AE integration strategy ablation | **keep** |
+| `src/tune_ae_strategy_ablation.py` | ABLATION_EVIDENCE | TUNE-B0 / TUNE-AE3 strategy tuning | **keep** |
+| `src/build_ae_strategy_ablation_comparison.py` | DIAGNOSTIC_AUDIT | Builds ablation summary tables | **keep** |
+| `src/build_ae_strategy_tuned_comparison.py` | DIAGNOSTIC_AUDIT | Builds tuned strategy comparison | **keep** |
+| `src/_validate_ae_strategy_ablation_pipeline.py` | DIAGNOSTIC_AUDIT | Static guards for AE strategy ablation | **keep** |
+| `src/_validate_ae_strategy_tuning_pipeline.py` | DIAGNOSTIC_AUDIT | Static guards for AE strategy tuning | **keep** |
+| `src/build_initial_proposal_comparison.py` | DIAGNOSTIC_AUDIT | Rebuilds BASE/AE initial proposal comparison | **keep** |
+| `src/_validate_initial_proposal_pipeline_guards.py` | DIAGNOSTIC_AUDIT | Guards for proposal-only rerun path | **keep** |
+| `src/gbdt_backends.py` | ACTIVE_WIP_GBDT | Shared LightGBM/XGBoost/CatBoost abstraction | **keep_wip** |
+| `src/train_gbdt_baseline.py` | ACTIVE_WIP_GBDT | Fixed/default raw GBDT shootout runner | **keep_wip** |
+| `src/tune_gbdt_baseline.py` | ACTIVE_WIP_GBDT | Optuna tuning for raw/AE3 GBDT variants | **keep_wip** |
+| `src/train_gbdt_ae3_integration.py` | ACTIVE_WIP_GBDT | Conditional AE3 integration on winning backend | **keep_wip** |
+| `src/build_gbdt_baseline_comparison.py` | ACTIVE_WIP_GBDT | GBDT comparison table and decision gate builder | **keep_wip** |
+| `src/_validate_gbdt_baseline_pipeline.py` | ACTIVE_WIP_GBDT | Static validation for GBDT WIP pipeline | **keep_wip** |
 
 ---
 
@@ -168,6 +202,8 @@
 | Path | Classification | Reason | Action |
 |------|----------------|--------|--------|
 | `tests/test_causal_behavioral_alignment.py` | DIAGNOSTIC_AUDIT | Alignment unit tests for BEH-01 | **keep** |
+| `tests/test_initial_proposal_pipeline_guards.py` | DIAGNOSTIC_AUDIT | Guards proposal-only rerun path from LF01/fusion bleed-through | **keep** |
+| `tests/test_ae_strategy_ablation_pipeline.py` | DIAGNOSTIC_AUDIT | Guards AE integration strategy ablation wiring | **keep** |
 
 ---
 
@@ -177,8 +213,10 @@
 |------|----------------|--------|--------|
 | `README.md` | DIAGNOSTIC_AUDIT | Stale structure; update from proposal | **keep; update Level 1** |
 | `requirements.txt` | CORE_SUPPORT | Dependencies | **keep** |
+| `requirements-dev.txt` | CORE_SUPPORT | Test/dev dependencies layered on runtime requirements | **keep** |
 | `.gitignore` | CORE_SUPPORT | Excludes `outputs/*`, allows `results/` summaries | **keep** |
 | `notebooks/thesis_experiment_report.ipynb` | DIAGNOSTIC_AUDIT | Supervisor reporting notebook | **keep** |
+| `src/README.md` | DIAGNOSTIC_AUDIT | Source script navigation without path movement | **keep** |
 
 ---
 
@@ -187,7 +225,8 @@
 | Path | Note | DELETE_CANDIDATE? |
 |------|------|-------------------|
 | `terminals/` | IDE/session capture; not scientific evidence | Local-only optional cleanup; **not** in tracked audit delete list |
-| `docs/EXPERIMENT_NAMING_GUIDE.md` etc. | Pending commit from naming phase | keep and commit later |
+| `src/__pycache__/`, `tests/__pycache__/` | Python bytecode caches | Local-only optional cleanup; regenerated automatically |
+| `docs/GBDT_BASELINE_COMPARISON_PLAN.md`, `src/*gbdt*` | Active WIP for backend comparison | **No**; keep WIP together or explicitly park in a later decision |
 
 ---
 

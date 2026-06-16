@@ -35,8 +35,11 @@ Per policy, a file is DELETE_CANDIDATE only if **all** of the following hold:
 | Path | Reason | References | Risk | Action | Rollback |
 |------|--------|------------|------|--------|----------|
 | `terminals/` | IDE session captures; not in git index | none in repo | **low** (local only) | Optional local delete by developer; **do not** add to git | N/A — never committed |
+| `src/__pycache__/`, `tests/__pycache__/` | Python bytecode caches; ignored runtime byproduct | none as scientific artifact | **low** (local only) | Optional local delete; regenerated automatically | N/A |
 
 This directory is **not** recommended for repository deletion workflow because it is untracked and outside the scientific artifact set.
+
+Active untracked GBDT files (`docs/GBDT_BASELINE_COMPARISON_PLAN.md`, `src/*gbdt*`) are **not** delete candidates; they are active WIP and should be reviewed/committed or explicitly parked as a separate decision.
 
 ---
 

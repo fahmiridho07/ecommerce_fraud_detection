@@ -35,6 +35,11 @@ def _check_autoencoder_robust_saves_manifest() -> None:
     source = (SRC_DIR / "train_autoencoder_robust.py").read_text(encoding="utf-8")
     assert "save_latent_split_manifest" in source
     assert LATENT_SPLIT_MANIFEST_CSV.replace(".csv", "") in source or LATENT_SPLIT_MANIFEST_CSV in source
+    assert "SimpleImputer" in source
+    assert "v_imputer.pkl" in source
+    assert "masked_mse_loss" in source
+    assert 'name="latent")(x)' in source
+    assert 'activation="linear", name="latent"' in source
 
 
 def _check_ae_lgbm_and_optuna_validate_manifest() -> None:
@@ -42,6 +47,11 @@ def _check_ae_lgbm_and_optuna_validate_manifest() -> None:
     optuna_source = (SRC_DIR / "tune_lgbm_optuna.py").read_text(encoding="utf-8")
     assert "validate_latent_split_manifest_alignment" in ae_source
     assert "validate_latent_split_manifest_alignment" in optuna_source
+    assert "validate_autoencoder_preprocessing_contract" in ae_source
+    assert "build_v_missing_indicators" in ae_source
+    assert "v_missing_indicators_included" in ae_source
+    assert "build_v_missing_indicators" in optuna_source
+    assert "v_missing_indicators_included" in optuna_source
 
 
 def _check_tune_lgbm_optuna_supports_autoencoder_output_dir() -> None:

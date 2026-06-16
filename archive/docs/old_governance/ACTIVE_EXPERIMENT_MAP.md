@@ -6,6 +6,8 @@ This document lists **only** the final active thesis path. All experiments below
 
 **Legacy IDs are preserved for reproducibility** because output directories, scripts, and historical records use them. **Canonical IDs are used for thesis writing and final reporting.**
 
+Active WIP branches such as GBDT-* are intentionally excluded from this map until their decision gates are complete and supervisor-approved.
+
 See [`docs/EXPERIMENT_NAMING_GUIDE.md`](EXPERIMENT_NAMING_GUIDE.md) for the full canonical registry.
 
 ## Active path overview

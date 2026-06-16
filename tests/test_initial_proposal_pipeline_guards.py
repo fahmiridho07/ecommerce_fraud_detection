@@ -95,6 +95,24 @@ def test_latent_manifest_alignment_fails_when_transaction_ids_are_shuffled(
         )
 
 
+def test_autoencoder_preprocessing_preserves_missingness_signal_by_contract() -> None:
+    source = (SRC_DIR / "train_autoencoder_robust.py").read_text(encoding="utf-8")
+    assert "SimpleImputer" in source
+    assert "v_imputer.pkl" in source
+    assert "masked_mse_loss" in source
+    assert 'activation="linear", name="latent"' in source
+
+
+def test_ae_lgbm_appends_v_missing_indicators() -> None:
+    ae_source = (SRC_DIR / "train_ae_lgbm.py").read_text(encoding="utf-8")
+    optuna_source = (SRC_DIR / "tune_lgbm_optuna.py").read_text(encoding="utf-8")
+    assert "build_v_missing_indicators" in ae_source
+    assert "v_missing_indicators_included" in ae_source
+    assert "validate_autoencoder_preprocessing_contract" in ae_source
+    assert "build_v_missing_indicators" in optuna_source
+    assert "v_missing_indicators_included" in optuna_source
+
+
 def test_initial_proposal_comparison_excludes_out_of_scope_model_names() -> None:
     assert set(INITIAL_PROPOSAL_MODEL_NAMES) == {
         candidate["model_name"] for candidate in INITIAL_PROPOSAL_CANDIDATES

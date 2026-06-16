@@ -13,6 +13,7 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 try:
@@ -49,24 +50,93 @@ from splitting import chronological_split
 from utils import ensure_dir, log, save_json, set_seed
 
 
+MASKED_TARGET_VALUE_SUFFIX = "_target_value"
+MASKED_TARGET_OBSERVED_SUFFIX = "_observed_mask"
+
+
+def build_median_imputer() -> SimpleImputer:
+    """Create a median imputer that keeps all V-feature columns when supported."""
+    try:
+        return SimpleImputer(strategy="median", keep_empty_features=True)
+    except TypeError:  # pragma: no cover - older sklearn compatibility
+        return SimpleImputer(strategy="median")
+
+
+def fit_transform_v_imputer(
+    imputer: SimpleImputer,
+    X_train_raw: pd.DataFrame,
+) -> np.ndarray:
+    X_train_imputed = imputer.fit_transform(X_train_raw)
+    if hasattr(imputer, "statistics_"):
+        imputer.statistics_ = np.where(np.isnan(imputer.statistics_), 0.0, imputer.statistics_)
+    if X_train_imputed.shape[1] != X_train_raw.shape[1]:
+        raise ValueError(
+            "Median imputation changed the number of V-features. Upgrade "
+            "scikit-learn or use an imputer that preserves empty features."
+        )
+    return X_train_imputed
+
+
+def build_masked_targets(X: np.ndarray, observed_mask: np.ndarray) -> np.ndarray:
+    """Pack reconstruction targets and observed-cell mask into y_true."""
+    return np.concatenate(
+        [X.astype("float32"), observed_mask.astype("float32")],
+        axis=1,
+    )
+
+
+@keras.utils.register_keras_serializable(package="thesis")
+def masked_mse_loss(y_true, y_pred):
+    """Mean squared reconstruction loss over originally observed V-feature cells."""
+    input_dim = tf.shape(y_pred)[1]
+    target = y_true[:, :input_dim]
+    observed_mask = y_true[:, input_dim:]
+    squared_error = tf.square(target - y_pred) * observed_mask
+    denominator = tf.maximum(tf.reduce_sum(observed_mask, axis=1), 1.0)
+    return tf.reduce_sum(squared_error, axis=1) / denominator
+
+
 def prepare_clipped_v_features(
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
     v_columns: list[str],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, StandardScaler]:
-    """Fill missing values, fit scaler on train only, then apply fixed clipping."""
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    StandardScaler,
+    SimpleImputer,
+]:
+    """Median-impute V-features, scale train-only, then apply fixed clipping."""
     if not v_columns:
         raise ValueError("No V-features were detected. Check V_FEATURE_PATTERN.")
 
-    X_train_raw = train_df.loc[:, v_columns].fillna(0).astype("float32")
-    X_valid_raw = valid_df.loc[:, v_columns].fillna(0).astype("float32")
-    X_test_raw = test_df.loc[:, v_columns].fillna(0).astype("float32")
+    X_train_raw = train_df.loc[:, v_columns].astype("float32")
+    X_valid_raw = valid_df.loc[:, v_columns].astype("float32")
+    X_test_raw = test_df.loc[:, v_columns].astype("float32")
+
+    observed_train = (~X_train_raw.isna()).to_numpy(dtype="float32")
+    observed_valid = (~X_valid_raw.isna()).to_numpy(dtype="float32")
+    observed_test = (~X_test_raw.isna()).to_numpy(dtype="float32")
+
+    imputer = build_median_imputer()
+    X_train_imputed = fit_transform_v_imputer(imputer, X_train_raw)
+    X_valid_imputed = imputer.transform(X_valid_raw)
+    X_test_imputed = imputer.transform(X_test_raw)
+    if (
+        X_valid_imputed.shape[1] != len(v_columns)
+        or X_test_imputed.shape[1] != len(v_columns)
+    ):
+        raise ValueError("Median imputation changed validation/test V-feature width.")
 
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train_raw).astype("float32")
-    X_valid = scaler.transform(X_valid_raw).astype("float32")
-    X_test = scaler.transform(X_test_raw).astype("float32")
+    X_train = scaler.fit_transform(X_train_imputed).astype("float32")
+    X_valid = scaler.transform(X_valid_imputed).astype("float32")
+    X_test = scaler.transform(X_test_imputed).astype("float32")
 
     if AE_USE_SCALED_CLIPPING:
         # Leakage-safe robust preprocessing: these bounds are fixed config
@@ -75,7 +145,16 @@ def prepare_clipped_v_features(
         X_valid = np.clip(X_valid, AE_CLIP_MIN, AE_CLIP_MAX)
         X_test = np.clip(X_test, AE_CLIP_MIN, AE_CLIP_MAX)
 
-    return X_train, X_valid, X_test, scaler
+    return (
+        X_train,
+        X_valid,
+        X_test,
+        observed_train,
+        observed_valid,
+        observed_test,
+        scaler,
+        imputer,
+    )
 
 
 def build_autoencoder(
@@ -87,7 +166,7 @@ def build_autoencoder(
     inputs = keras.Input(shape=(input_dim,), name="v_features")
     x = keras.layers.Dense(256, activation="relu", name="encoder_dense_256")(inputs)
     x = keras.layers.Dense(128, activation="relu", name="encoder_dense_128")(x)
-    latent = keras.layers.Dense(latent_dim, activation="relu", name="latent")(x)
+    latent = keras.layers.Dense(latent_dim, activation="linear", name="latent")(x)
     x = keras.layers.Dense(128, activation="relu", name="decoder_dense_128")(latent)
     x = keras.layers.Dense(256, activation="relu", name="decoder_dense_256")(x)
     outputs = keras.layers.Dense(input_dim, activation="linear", name="reconstruction")(x)
@@ -96,7 +175,7 @@ def build_autoencoder(
     encoder = keras.Model(inputs=inputs, outputs=latent, name="robust_v_feature_encoder")
     autoencoder.compile(
         optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
-        loss="mse",
+        loss=masked_mse_loss,
     )
     return autoencoder, encoder
 
@@ -104,11 +183,14 @@ def build_autoencoder(
 def reconstruction_errors(
     model: keras.Model,
     X: np.ndarray,
+    observed_mask: np.ndarray,
     batch_size: int,
 ) -> np.ndarray:
-    """Compute per-row reconstruction MSE."""
+    """Compute per-row reconstruction MSE over originally observed V-feature cells."""
     reconstructed = model.predict(X, batch_size=batch_size, verbose=0)
-    return np.mean(np.square(X - reconstructed), axis=1)
+    squared_error = np.square(X - reconstructed) * observed_mask
+    denominator = np.maximum(observed_mask.sum(axis=1), 1.0)
+    return squared_error.sum(axis=1) / denominator
 
 
 def reconstruction_stats(errors: np.ndarray) -> dict[str, float | int]:
@@ -211,6 +293,11 @@ def main(
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     tf.keras.utils.set_random_seed(RANDOM_SEED)
+    if latent_dim != AE_LATENT_DIM and output_dir == AUTOENCODER_ROBUST_OUTPUT_DIR:
+        raise SystemExit(
+            "Non-default latent_dim runs must pass an explicit --output-dir so "
+            "LD32 and LD128 artifacts cannot overwrite each other."
+        )
     output_dir = ensure_dir(output_dir)
 
     log("Loading labeled training data.")
@@ -225,8 +312,20 @@ def main(
         f"ae_latent_{index:03d}" for index in range(1, latent_dim + 1)
     ]
 
-    log(f"Preparing {input_dim} V-features with train-fitted scaling and fixed clipping.")
-    X_train, X_valid, X_test, scaler = prepare_clipped_v_features(
+    log(
+        f"Preparing {input_dim} V-features with train-fitted median imputation, "
+        "scaling, and fixed clipping."
+    )
+    (
+        X_train,
+        X_valid,
+        X_test,
+        observed_train,
+        observed_valid,
+        observed_test,
+        scaler,
+        imputer,
+    ) = prepare_clipped_v_features(
         train_df,
         valid_df,
         test_df,
@@ -240,11 +339,14 @@ def main(
         learning_rate=AE_LEARNING_RATE,
     )
 
-    log("Training robust Autoencoder on clipped train V-features only.")
+    y_train_masked = build_masked_targets(X_train, observed_train)
+    y_valid_masked = build_masked_targets(X_valid, observed_valid)
+
+    log("Training robust Autoencoder with masked reconstruction loss on observed V-feature cells.")
     history = autoencoder.fit(
         X_train,
-        X_train,
-        validation_data=(X_valid, X_valid),
+        y_train_masked,
+        validation_data=(X_valid, y_valid_masked),
         epochs=AE_MAX_EPOCHS,
         batch_size=AE_BATCH_SIZE,
         shuffle=True,
@@ -276,9 +378,9 @@ def main(
     save_latent_split_manifest(train_df, valid_df, test_df, output_dir)
 
     log("Computing robust reconstruction metrics.")
-    train_errors = reconstruction_errors(autoencoder, X_train, AE_BATCH_SIZE)
-    valid_errors = reconstruction_errors(autoencoder, X_valid, AE_BATCH_SIZE)
-    test_errors = reconstruction_errors(autoencoder, X_test, AE_BATCH_SIZE)
+    train_errors = reconstruction_errors(autoencoder, X_train, observed_train, AE_BATCH_SIZE)
+    valid_errors = reconstruction_errors(autoencoder, X_valid, observed_valid, AE_BATCH_SIZE)
+    test_errors = reconstruction_errors(autoencoder, X_test, observed_test, AE_BATCH_SIZE)
 
     save_reconstruction_errors(train_errors, output_dir / "reconstruction_error_train.csv")
     save_reconstruction_errors(valid_errors, output_dir / "reconstruction_error_valid.csv")
@@ -296,6 +398,12 @@ def main(
         "clipping_enabled": AE_USE_SCALED_CLIPPING,
         "clipping_min": AE_CLIP_MIN,
         "clipping_max": AE_CLIP_MAX,
+        "loss": "masked_mse_loss",
+        "observed_v_cell_rate": {
+            "train": float(observed_train.mean()),
+            "validation": float(observed_valid.mean()),
+            "test": float(observed_test.mean()),
+        },
         "splits": {
             "train": train_stats,
             "validation": valid_stats,
@@ -311,6 +419,7 @@ def main(
     autoencoder.save(output_dir / "autoencoder_model.keras")
     encoder.save(output_dir / "encoder_model.keras")
     joblib.dump(scaler, output_dir / "v_scaler.pkl")
+    joblib.dump(imputer, output_dir / "v_imputer.pkl")
     save_json(latent_feature_names, output_dir / "latent_feature_names.json")
 
     run_config = {
@@ -329,8 +438,11 @@ def main(
         "v_columns": v_columns,
         "target_usage": "isFraud is not used for Autoencoder training.",
         "preprocessing": {
-            "missing_value_strategy": "Fill V-feature missing values with 0.",
-            "scaler": "StandardScaler fitted on train V-features only.",
+            "missing_value_strategy": (
+                "SimpleImputer(strategy='median') fitted on train V-features only."
+            ),
+            "imputer_artifact": "v_imputer.pkl",
+            "scaler": "StandardScaler fitted on train median-imputed V-features only.",
             "scaled_clipping_enabled": AE_USE_SCALED_CLIPPING,
             "clip_min": AE_CLIP_MIN,
             "clip_max": AE_CLIP_MAX,
@@ -344,10 +456,12 @@ def main(
             "encoder": [256, 128, latent_dim],
             "decoder": [128, 256, input_dim],
             "hidden_activation": "relu",
+            "latent_activation": "linear",
             "output_activation": "linear",
         },
         "training": {
-            "loss": "mse",
+            "loss": "masked_mse_loss",
+            "loss_observed_cells_only": True,
             "optimizer": "Adam",
             "learning_rate": AE_LEARNING_RATE,
             "batch_size": AE_BATCH_SIZE,
@@ -356,6 +470,11 @@ def main(
             "best_epoch": best_epoch,
             "best_validation_loss": best_validation_loss,
             "random_seed": RANDOM_SEED,
+        },
+        "observed_v_cell_rate": {
+            "train": float(observed_train.mean()),
+            "validation": float(observed_valid.mean()),
+            "test": float(observed_test.mean()),
         },
         "latent_features": latent_feature_names,
     }
@@ -367,6 +486,8 @@ def main(
     print(f"V features          : {input_dim}")
     print(f"Latent dimension    : {latent_dim}")
     print(f"Scaled clipping     : {AE_USE_SCALED_CLIPPING} [{AE_CLIP_MIN}, {AE_CLIP_MAX}]")
+    print("Imputation          : train-fitted median")
+    print("Reconstruction loss : masked MSE on observed V cells")
     print(f"Best epoch          : {best_epoch}")
     print(f"Best validation loss: {best_validation_loss:.6f}")
     print(f"Train MSE mean      : {train_stats['mean']:.6f}")

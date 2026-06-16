@@ -12,8 +12,7 @@ data/interim/*
 
 # Dataset / large tabular files
 *.csv
-!results/causal_behavioral_alignment_correction.csv
-!results/causal_behavioral_ae_late_fusion.csv
+!archive/results/**/*.csv
 *.parquet
 *.feather
 *.h5
@@ -21,9 +20,7 @@ data/interim/*
 *.xlsx
 *.xls
 *.jsonl
-!results/causal_behavioral_alignment_manifest.json
-!results/causal_behavioral_ae_late_fusion_manifest.json
-!results/late_fusion_complementarity_summary.json
+!archive/results/**/*.json
 
 
 # =========================================================
@@ -139,6 +136,49 @@ pip-wheel-metadata/
 
 # Local IDE / agent session captures (not thesis artifacts)
 terminals/
+.cursor/
+AGENTS.md
+
+
+# =========================================================
+# Thesis materials (keep in parent workspace, not repo)
+# =========================================================
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.ppt
+
+# Safety net if parent reference folders are copied into repo by mistake
+2. Reference/
+4. Deep Research/
+5. Reference (MarkDown)/
+
+Draft_*.docx
+Draft_*.pdf
+
+
+# =========================================================
+# Legacy / generated local folders
+# =========================================================
+/results/
+
+# Experiment tracking / logs
+*.log
+wandb/
+mlruns/
+tensorboard/
+tb_logs/
+
+
+# =========================================================
+# Archives & large binaries
+# =========================================================
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.rar
 
 
 # =========================================================

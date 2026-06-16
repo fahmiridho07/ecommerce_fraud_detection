@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import joblib
@@ -85,6 +86,7 @@ def load_robust_latent_outputs(
         "latent_valid": autoencoder_output_dir / "latent_valid.npy",
         "latent_test": autoencoder_output_dir / "latent_test.npy",
         "latent_feature_names": autoencoder_output_dir / "latent_feature_names.json",
+        "v_imputer": autoencoder_output_dir / "v_imputer.pkl",
         "run_config": autoencoder_output_dir / "run_config.json",
     }
     missing = [str(path) for path in required_files.values() if not path.exists()]
@@ -103,8 +105,30 @@ def load_robust_latent_outputs(
 
     if not isinstance(latent_feature_names, list):
         raise TypeError("latent_feature_names.json must contain a list of feature names.")
+    validate_autoencoder_preprocessing_contract(run_config, autoencoder_output_dir)
 
     return latent_train, latent_valid, latent_test, latent_feature_names, run_config
+
+
+def validate_autoencoder_preprocessing_contract(
+    run_config: dict[str, object],
+    autoencoder_output_dir: Path,
+) -> None:
+    """Reject stale zero-fill Autoencoder artifacts after the missingness fix."""
+    preprocessing = run_config.get("preprocessing", {})
+    training = run_config.get("training", {})
+    if not isinstance(preprocessing, dict) or not isinstance(training, dict):
+        raise ValueError(
+            f"{autoencoder_output_dir} has an invalid run_config.json schema."
+        )
+    missing_strategy = str(preprocessing.get("missing_value_strategy", ""))
+    loss_name = str(training.get("loss", ""))
+    if "SimpleImputer" not in missing_strategy or loss_name != "masked_mse_loss":
+        raise ValueError(
+            "Stale Autoencoder artifacts detected. Re-run "
+            "`python src/train_autoencoder_robust.py` with the current "
+            "median-imputation and masked-loss pipeline before training AE-LightGBM."
+        )
 
 
 def build_latent_split_manifest_frame(
@@ -264,22 +288,80 @@ def validate_latent_outputs(
         raise ValueError("Duplicate latent feature names found.")
 
 
+def load_top_v_features_from_importance(
+    importance_path: Path,
+    top_k: int,
+    v_columns: list[str],
+) -> list[str]:
+    """Select the top-K V-features by baseline LightGBM gain."""
+    if top_k <= 0:
+        raise ValueError("retain_top_v_features must be a positive integer.")
+    if not importance_path.exists():
+        raise FileNotFoundError(f"Missing baseline feature importance file: {importance_path}")
+
+    importance = pd.read_csv(importance_path)
+    if "feature" not in importance.columns or "importance_gain" not in importance.columns:
+        raise ValueError(
+            f"{importance_path} must contain feature and importance_gain columns."
+        )
+    allowed_v = set(v_columns)
+    ranked_v = (
+        importance.loc[importance["feature"].isin(allowed_v)]
+        .sort_values(["importance_gain", "importance_split"], ascending=False)
+        .drop_duplicates(subset=["feature"])
+    )
+    if ranked_v.empty:
+        raise ValueError(
+            f"No V-features were found in baseline importance file: {importance_path}"
+        )
+    if len(ranked_v) < top_k:
+        raise ValueError(
+            f"Requested top {top_k} V-features, but only {len(ranked_v)} are available."
+        )
+    return ranked_v.head(top_k)["feature"].tolist()
+
+
+def resolve_replaced_v_columns(
+    v_columns: list[str],
+    retained_v_columns: list[str] | None,
+) -> tuple[list[str], list[str]]:
+    """Return replaced and retained V-feature lists for hybrid AE-LightGBM runs."""
+    if not retained_v_columns:
+        return list(v_columns), []
+    retained = list(retained_v_columns)
+    unknown = sorted(set(retained) - set(v_columns))
+    if unknown:
+        raise ValueError(
+            "retained_v_columns contains unknown V-features: " + ", ".join(unknown[:10])
+        )
+    replaced = [column for column in v_columns if column not in set(retained)]
+    return replaced, retained
+
+
 def split_non_v_features_target(
     df: pd.DataFrame,
-    v_columns: list[str],
+    excluded_v_columns: list[str],
 ) -> tuple[pd.DataFrame, pd.Series]:
-    """Return non-V model features and target labels.
-
-    Original V-features are intentionally excluded because they are replaced by
-    robust Autoencoder latent features in the proposed model.
-    """
+    """Return model features excluding selected V columns plus target labels."""
     y = df[TARGET_COL].astype(int).copy()
-    excluded = set(v_columns + [TARGET_COL, ID_COL])
+    excluded = set(excluded_v_columns + [TARGET_COL, ID_COL])
     feature_columns = [column for column in df.columns if column not in excluded]
     return df.loc[:, feature_columns].copy(), y
 
 
-def fit_non_v_preprocessing(X_train: pd.DataFrame, v_columns: list[str]) -> dict[str, object]:
+def build_retained_v_features(
+    df: pd.DataFrame,
+    retained_v_columns: list[str],
+) -> pd.DataFrame:
+    """Keep selected original V-features with NaN preserved for LightGBM."""
+    return df.loc[:, retained_v_columns].copy()
+
+
+def fit_non_v_preprocessing(
+    X_train: pd.DataFrame,
+    replaced_v_columns: list[str],
+    retained_v_columns: list[str] | None = None,
+) -> dict[str, object]:
     """Fit categorical mappings on train non-V features only."""
     categorical_columns = get_categorical_columns(X_train)
     categorical_mappings = fit_categorical_mappings(X_train, categorical_columns)
@@ -290,7 +372,8 @@ def fit_non_v_preprocessing(X_train: pd.DataFrame, v_columns: list[str]) -> dict
         "missing_category": MISSING_CATEGORY,
         "unknown_category_value": UNKNOWN_CATEGORY_VALUE,
         "dropped_columns": [ID_COL],
-        "excluded_original_v_features": v_columns,
+        "excluded_original_v_features": replaced_v_columns,
+        "retained_original_v_features": list(retained_v_columns or []),
         "numeric_missing_values": "Preserved as NaN for LightGBM native handling.",
     }
 
@@ -310,14 +393,30 @@ def combine_non_v_and_latent(
     X_non_v: pd.DataFrame,
     latent: np.ndarray,
     latent_feature_names: list[str],
+    missing_indicators: pd.DataFrame | None = None,
+    retained_v_features: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Concatenate processed non-V features with robust latent V features."""
+    """Concatenate non-V, latent, retained V-values, and missing indicators."""
     latent_df = pd.DataFrame(latent, columns=latent_feature_names)
-    return pd.concat(
-        [
-            X_non_v.reset_index(drop=True),
-            latent_df.reset_index(drop=True),
-        ],
+    parts = [X_non_v.reset_index(drop=True), latent_df.reset_index(drop=True)]
+    if retained_v_features is not None:
+        parts.append(retained_v_features.reset_index(drop=True))
+    if missing_indicators is not None:
+        parts.append(missing_indicators.reset_index(drop=True))
+    return pd.concat(parts, axis=1)
+
+
+def v_missing_indicator_names(v_columns: list[str]) -> list[str]:
+    return [f"v_missing_{column}" for column in v_columns]
+
+
+def build_v_missing_indicators(
+    df: pd.DataFrame,
+    v_columns: list[str],
+) -> pd.DataFrame:
+    """Preserve original V-feature missingness as supervised LightGBM inputs."""
+    return df.loc[:, v_columns].isna().astype("int8").set_axis(
+        v_missing_indicator_names(v_columns),
         axis=1,
     )
 
@@ -326,20 +425,31 @@ def validate_feature_alignment(
     X_train: pd.DataFrame,
     X_valid: pd.DataFrame,
     X_test: pd.DataFrame,
-    v_columns: list[str],
+    replaced_v_columns: list[str],
+    retained_v_columns: list[str] | None = None,
 ) -> None:
-    """Ensure final model matrices are aligned and original V-features are absent."""
+    """Ensure matrices align and only allowed original V-features are present."""
     if X_valid.columns.tolist() != X_train.columns.tolist():
         raise ValueError("Validation feature columns do not align with train columns.")
     if X_test.columns.tolist() != X_train.columns.tolist():
         raise ValueError("Test feature columns do not align with train columns.")
 
-    leaked_v_columns = sorted(set(X_train.columns) & set(v_columns))
+    allowed_v = set(retained_v_columns or [])
+    leaked_v_columns = sorted(
+        (set(X_train.columns) & set(replaced_v_columns)) - allowed_v
+    )
     if leaked_v_columns:
         raise ValueError(
-            "Original V-features were found in final AE-LightGBM features: "
+            "Replaced V-features were found in final AE-LightGBM features: "
             + ", ".join(leaked_v_columns[:10])
         )
+    if retained_v_columns:
+        missing_retained = sorted(allowed_v - set(X_train.columns))
+        if missing_retained:
+            raise ValueError(
+                "Retained V-features are missing from final AE-LightGBM features: "
+                + ", ".join(missing_retained[:10])
+            )
 
 
 def build_model_params(y_train: pd.Series) -> dict[str, object]:
@@ -392,10 +502,21 @@ def load_baseline_selected_metrics() -> dict[str, float] | None:
     return load_json(baseline_path)
 
 
+def load_baseline_metrics_from_path(path: Path) -> dict[str, float] | None:
+    if not path.exists():
+        return None
+    return load_json(path)
+
+
 def build_baseline_comparison(
     ae_metrics: dict[str, object],
+    baseline_metrics_path: Path | None = None,
 ) -> dict[str, float] | None:
-    baseline_metrics = load_baseline_selected_metrics()
+    baseline_metrics = (
+        load_baseline_metrics_from_path(baseline_metrics_path)
+        if baseline_metrics_path is not None
+        else load_baseline_selected_metrics()
+    )
     if baseline_metrics is None:
         return None
 
@@ -419,20 +540,67 @@ def save_metrics(metrics: dict[str, object], path: Path) -> None:
     save_json(metrics, path)
 
 
-def main(
-    autoencoder_output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
-    output_dir: Path = AE_LGBM_OUTPUT_DIR,
-    phase_name: str = "4_ae_lgbm",
-) -> dict[str, object]:
-    set_seed(RANDOM_SEED)
-    output_dir = ensure_dir(output_dir)
+@dataclass
+class AELGBMTrainingData:
+    X_train: pd.DataFrame
+    X_valid: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: pd.Series
+    y_valid: pd.Series
+    y_test: pd.Series
+    categorical_columns: list[str]
+    preprocessing_non_v: dict[str, object]
+    v_columns: list[str]
+    replaced_v_columns: list[str]
+    retained_v_columns: list[str]
+    latent_feature_names: list[str]
+    robust_ae_run_config: dict[str, object]
+    missing_indicator_names: list[str]
+    retain_top_v_features: int | None
+    baseline_importance_path: str | None
 
+    @property
+    def total_features(self) -> int:
+        return int(self.X_train.shape[1])
+
+    @property
+    def representation_mode(self) -> str:
+        if self.retained_v_columns:
+            return "hybrid_latent_plus_top_v_retention"
+        return "full_latent_replacement"
+
+
+def prepare_ae_lgbm_training_data(
+    autoencoder_output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
+    retain_top_v_features: int | None = None,
+    baseline_importance_path: Path | None = None,
+) -> AELGBMTrainingData:
+    """Build AE-LightGBM feature matrices without fitting the classifier."""
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
     log("Creating chronological train/validation/test split.")
     train_df, valid_df, test_df = chronological_split(full_df)
     v_columns = get_v_feature_columns(train_df)
+    retained_v_columns: list[str] = []
+    if retain_top_v_features is not None:
+        if baseline_importance_path is None:
+            raise ValueError(
+                "baseline_importance_path is required when retain_top_v_features is set."
+            )
+        retained_v_columns = load_top_v_features_from_importance(
+            baseline_importance_path,
+            retain_top_v_features,
+            v_columns,
+        )
+        log(
+            "Retaining top baseline V-features alongside AE latents: "
+            f"{len(retained_v_columns)} columns."
+        )
+    replaced_v_columns, retained_v_columns = resolve_replaced_v_columns(
+        v_columns,
+        retained_v_columns,
+    )
 
     log("Loading robust Autoencoder latent features.")
     (
@@ -463,20 +631,117 @@ def main(
     X_valid_non_v_raw, y_valid = split_non_v_features_target(valid_df, v_columns)
     X_test_non_v_raw, y_test = split_non_v_features_target(test_df, v_columns)
 
-    # Leakage prevention: non-V categorical mappings are fit on train only.
-    # Original V-features are excluded here and replaced by robust AE latents.
-    preprocessing_non_v = fit_non_v_preprocessing(X_train_non_v_raw, v_columns)
+    preprocessing_non_v = fit_non_v_preprocessing(
+        X_train_non_v_raw,
+        replaced_v_columns,
+        retained_v_columns,
+    )
     X_train_non_v = apply_non_v_preprocessing(X_train_non_v_raw, preprocessing_non_v)
     X_valid_non_v = apply_non_v_preprocessing(X_valid_non_v_raw, preprocessing_non_v)
     X_test_non_v = apply_non_v_preprocessing(X_test_non_v_raw, preprocessing_non_v)
 
-    log("Combining processed non-V features with robust latent V features.")
-    X_train = combine_non_v_and_latent(X_train_non_v, latent_train, latent_feature_names)
-    X_valid = combine_non_v_and_latent(X_valid_non_v, latent_valid, latent_feature_names)
-    X_test = combine_non_v_and_latent(X_test_non_v, latent_test, latent_feature_names)
-    validate_feature_alignment(X_train, X_valid, X_test, v_columns)
+    retained_train = (
+        build_retained_v_features(train_df, retained_v_columns)
+        if retained_v_columns
+        else None
+    )
+    retained_valid = (
+        build_retained_v_features(valid_df, retained_v_columns)
+        if retained_v_columns
+        else None
+    )
+    retained_test = (
+        build_retained_v_features(test_df, retained_v_columns)
+        if retained_v_columns
+        else None
+    )
 
-    categorical_columns = preprocessing_non_v["categorical_columns"]
+    log("Combining processed non-V features with robust latent V features.")
+    missing_train = build_v_missing_indicators(train_df, replaced_v_columns)
+    missing_valid = build_v_missing_indicators(valid_df, replaced_v_columns)
+    missing_test = build_v_missing_indicators(test_df, replaced_v_columns)
+    missing_indicator_names = missing_train.columns.tolist()
+    X_train = combine_non_v_and_latent(
+        X_train_non_v,
+        latent_train,
+        latent_feature_names,
+        missing_train,
+        retained_train,
+    )
+    X_valid = combine_non_v_and_latent(
+        X_valid_non_v,
+        latent_valid,
+        latent_feature_names,
+        missing_valid,
+        retained_valid,
+    )
+    X_test = combine_non_v_and_latent(
+        X_test_non_v,
+        latent_test,
+        latent_feature_names,
+        missing_test,
+        retained_test,
+    )
+    validate_feature_alignment(
+        X_train,
+        X_valid,
+        X_test,
+        replaced_v_columns,
+        retained_v_columns,
+    )
+
+    return AELGBMTrainingData(
+        X_train=X_train,
+        X_valid=X_valid,
+        X_test=X_test,
+        y_train=y_train,
+        y_valid=y_valid,
+        y_test=y_test,
+        categorical_columns=preprocessing_non_v["categorical_columns"],
+        preprocessing_non_v=preprocessing_non_v,
+        v_columns=v_columns,
+        replaced_v_columns=replaced_v_columns,
+        retained_v_columns=retained_v_columns,
+        latent_feature_names=latent_feature_names,
+        robust_ae_run_config=robust_ae_run_config,
+        missing_indicator_names=missing_indicator_names,
+        retain_top_v_features=retain_top_v_features,
+        baseline_importance_path=(
+            str(baseline_importance_path) if baseline_importance_path else None
+        ),
+    )
+
+
+def main(
+    autoencoder_output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
+    output_dir: Path = AE_LGBM_OUTPUT_DIR,
+    phase_name: str = "4_ae_lgbm",
+    retain_top_v_features: int | None = None,
+    baseline_importance_path: Path | None = None,
+    baseline_metrics_path: Path | None = None,
+) -> dict[str, object]:
+    set_seed(RANDOM_SEED)
+    output_dir = ensure_dir(output_dir)
+
+    prepared = prepare_ae_lgbm_training_data(
+        autoencoder_output_dir=autoencoder_output_dir,
+        retain_top_v_features=retain_top_v_features,
+        baseline_importance_path=baseline_importance_path,
+    )
+    X_train = prepared.X_train
+    X_valid = prepared.X_valid
+    X_test = prepared.X_test
+    y_train = prepared.y_train
+    y_valid = prepared.y_valid
+    y_test = prepared.y_test
+    preprocessing_non_v = prepared.preprocessing_non_v
+    v_columns = prepared.v_columns
+    replaced_v_columns = prepared.replaced_v_columns
+    retained_v_columns = prepared.retained_v_columns
+    latent_feature_names = prepared.latent_feature_names
+    robust_ae_run_config = prepared.robust_ae_run_config
+    missing_indicator_names = prepared.missing_indicator_names
+    categorical_columns = prepared.categorical_columns
     model_params = build_model_params(y_train)
     model = lgb.LGBMClassifier(**model_params)
 
@@ -566,11 +831,15 @@ def main(
 
     robust_preprocessing = robust_ae_run_config.get("preprocessing", {})
     feature_set_summary = {
-        "number_of_non_v_features": int(X_train_non_v.shape[1]),
+        "number_of_non_v_features": int(len(preprocessing_non_v["feature_columns"])),
         "number_of_latent_v_features": int(len(latent_feature_names)),
+        "number_of_retained_original_v_features": int(len(retained_v_columns)),
+        "number_of_v_missing_indicator_features": int(len(missing_indicator_names)),
         "total_final_features": int(X_train.shape[1]),
-        "original_v_features_excluded": True,
-        "number_of_original_v_features_excluded": int(len(v_columns)),
+        "original_v_features_fully_replaced": not bool(retained_v_columns),
+        "retained_original_v_features_included": bool(retained_v_columns),
+        "v_missing_indicators_included": True,
+        "number_of_original_v_features_excluded": int(len(replaced_v_columns)),
         "robust_autoencoder_output_path_used": str(autoencoder_output_dir),
         "robust_autoencoder_clipping": {
             "enabled": robust_preprocessing.get("scaled_clipping_enabled"),
@@ -579,8 +848,13 @@ def main(
         },
     }
     save_json(feature_set_summary, output_dir / "feature_set_summary.json")
+    if retained_v_columns:
+        save_json(retained_v_columns, output_dir / "retained_v_features.json")
 
-    comparison = build_baseline_comparison(metrics_test_selected)
+    comparison = build_baseline_comparison(
+        metrics_test_selected,
+        baseline_metrics_path=baseline_metrics_path,
+    )
     if comparison is not None:
         save_json(comparison, output_dir / "comparison_against_baseline.json")
 
@@ -603,10 +877,23 @@ def main(
             "test": TEST_RATIO,
         },
         "feature_construction": {
-            "original_v_features_replaced_by_robust_latents": True,
+            "representation_mode": (
+                "hybrid_latent_plus_top_v_retention"
+                if retained_v_columns
+                else "full_latent_replacement"
+            ),
+            "retain_top_v_features": retain_top_v_features,
+            "baseline_importance_path": (
+                str(baseline_importance_path) if baseline_importance_path else None
+            ),
+            "retained_original_v_features": retained_v_columns,
+            "replaced_original_v_feature_count": len(replaced_v_columns),
             "original_v_feature_count": len(v_columns),
-            "non_v_feature_count": int(X_train_non_v.shape[1]),
+            "non_v_feature_count": int(len(preprocessing_non_v["feature_columns"])),
             "latent_feature_count": len(latent_feature_names),
+            "retained_original_v_feature_count": len(retained_v_columns),
+            "v_missing_indicator_count": len(missing_indicator_names),
+            "v_missing_indicators_included": True,
             "total_feature_count": int(X_train.shape[1]),
             "robust_autoencoder_output_dir": str(autoencoder_output_dir),
         },
@@ -686,6 +973,27 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-dir", type=Path, default=AE_LGBM_OUTPUT_DIR)
     parser.add_argument("--phase-name", default="4_ae_lgbm")
+    parser.add_argument(
+        "--retain-top-v-features",
+        type=int,
+        default=None,
+        help=(
+            "Retain the top-K original V-features by baseline gain alongside AE "
+            "latents and missing indicators for the remaining V columns."
+        ),
+    )
+    parser.add_argument(
+        "--baseline-importance-path",
+        type=Path,
+        default=None,
+        help="Baseline feature_importance.csv used to rank retained V-features.",
+    )
+    parser.add_argument(
+        "--baseline-metrics-path",
+        type=Path,
+        default=None,
+        help="Optional baseline metrics JSON for comparison_against_baseline.json.",
+    )
     return parser.parse_args()
 
 
@@ -695,4 +1003,7 @@ if __name__ == "__main__":
         autoencoder_output_dir=args.autoencoder_output_dir,
         output_dir=args.output_dir,
         phase_name=args.phase_name,
+        retain_top_v_features=args.retain_top_v_features,
+        baseline_importance_path=args.baseline_importance_path,
+        baseline_metrics_path=args.baseline_metrics_path,
     )
