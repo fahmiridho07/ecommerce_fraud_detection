@@ -190,9 +190,77 @@ python src/train_ae_reconstruction_error_lgbm.py \
 
 This writes `comparison_against_initial_proposal.json` beside the model outputs. The 2026-06-16 run reached validation AP 0.612397 and test AP 0.495067 with 434 features. Treat this as post-diagnostic supporting evidence, not as a replacement for the four-row P01-P04 canonical comparison.
 
+### AE-05 Hybrid + Reconstruction-Error Candidate
+
+The first AE candidate that beats P02 keeps the top-25 supervised `V*` values, uses LD32 latent features for the replaced lower-gain `V*` block, and appends the global AE reconstruction-error score.
+
+```bash
+python src/tune_ae_hybrid_reconstruction_lgbm.py \
+  --n_trials 0 \
+  --output-dir outputs/initial_proposal/ae_lgbm_ld32_top25v_recon_fixed_from_hybrid_tuned
+
+python src/compare_ae_hybrid_recon_bootstrap.py \
+  --n-bootstrap 1000 \
+  --output-dir outputs/initial_proposal/representation_ablation/bootstrap_ae05_vs_p02
+
+python src/build_extended_proposal_comparison.py
+
+python src/build_significance_comparison.py
+
+# Independent Optuna for AE-05 (15 trials, optional verification):
+python src/tune_ae_hybrid_reconstruction_lgbm.py \
+  --n_trials 15 \
+  --tuning_profile final
+```
+
+The 2026-06-16 run reached validation AP 0.626124 and test AP 0.509821 with 466 features. It beats P02 tuned baseline by +0.004921 test AP; paired bootstrap CI for the AP delta is [+0.000650, +0.009316] with one-sided p(delta <= 0) = 0.009.
+
+### AE Refinement Ablations
+
+To test paper-aligned AE refinements before tuning, run:
+
+```bash
+python src/train_autoencoder_normal_masked.py \
+  --latent-dim 128 \
+  --output-dir outputs/initial_proposal/normal_masked_autoencoder_ld128 \
+  --phase-name normal_only_mask_aware_autoencoder_ld128 \
+  --input-noise-std 0.02
+
+python src/train_ae_reconstruction_error_lgbm.py \
+  --autoencoder-output-dir outputs/initial_proposal/normal_masked_autoencoder_ld128 \
+  --output-dir outputs/initial_proposal/ae_normal_masked_global_error_ld128_default \
+  --initial-proposal-dir outputs/initial_proposal \
+  --phase-name AE_NORMAL_MASKED_GLOBAL_ERROR_LD128_default_lgbm
+
+python src/train_ae_reconstruction_feature_lgbm.py \
+  --ae-feature-dir outputs/initial_proposal/normal_masked_autoencoder_ld128 \
+  --output-dir outputs/initial_proposal/ae_normal_masked_error_ld128_default \
+  --initial-proposal-dir outputs/initial_proposal \
+  --phase-name AE_NORMAL_MASKED_GROUPED_ERRORS_LD128_default_lgbm
+```
+
+Optional grouped-error diagnostic from the existing robust LD128 AE:
+
+```bash
+python src/generate_ae_reconstruction_feature_tables.py \
+  --autoencoder-dir outputs/initial_proposal/autoencoder_robust_ld128 \
+  --output-dir outputs/initial_proposal/autoencoder_robust_ld128_grouped_features \
+  --feature-prefix robust_ae_ld128
+
+python src/train_ae_reconstruction_feature_lgbm.py \
+  --ae-feature-dir outputs/initial_proposal/autoencoder_robust_ld128_grouped_features \
+  --output-dir outputs/initial_proposal/ae_robust_grouped_error_ld128_default \
+  --initial-proposal-dir outputs/initial_proposal \
+  --phase-name AE_ROBUST_GROUPED_ERRORS_LD128_default_lgbm \
+  --expected-feature-prefix robust_ae_ld128 \
+  --allow-non-normal-source
+```
+
+The 2026-06-16 refinement runs did not beat the robust LD128 global reconstruction-error augmentation. Keep them as diagnostic evidence for temporal drift and avoid promoting them without a new validation result.
+
 ## Diagnostics (No Retraining)
 
-After P01-P04 artifacts exist under `outputs/initial_proposal/`, generate thesis-facing diagnostics:
+After P01-P04 artifacts exist under `outputs/initial_proposal/`, generate technical diagnostics (not thesis narrative until P02 is beaten):
 
 ```bash
 python src/generate_initial_proposal_diagnostics.py
@@ -203,7 +271,7 @@ Outputs go to `outputs/initial_proposal/diagnostics/`:
 | File | Purpose |
 |------|---------|
 | `diagnostic_summary.json` | Machine-readable summary |
-| `diagnostic_notes.md` | Short thesis-facing interpretation |
+| `diagnostic_notes.md` | Short technical interpretation (engineering only) |
 | `v_cell_missingness_by_split.csv` | Cell-level `V*` missing rate per split |
 | `v_row_missing_count_fraud_rate_by_split.csv` | Fraud rate by row missing-count bins |
 | `v_column_missing_fraud_lift_train.csv` | Per-`V*` missing vs observed fraud lift (train only) |

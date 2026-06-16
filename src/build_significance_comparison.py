@@ -56,7 +56,11 @@ def row_from_dir(
     if total_features is None:
         total_features = run_config.get("model_features_count")
     optuna = run_config.get("optuna", {})
+    if not isinstance(optuna, dict):
+        optuna = {}
     n_trials = optuna.get("n_trials_completed", 0 if not tuned else None)
+    if n_trials is None and run_config.get("training_mode") == "fixed_params":
+        n_trials = 0
     return {
         "tier": tier,
         "model_name": model_name,
@@ -94,6 +98,20 @@ def main() -> None:
         ("hybrid", "AE_top25v_default", root / "ae_lgbm_ld32_top25v_default", False, 25),
         ("hybrid", "AE_top50v_default", root / "ae_lgbm_ld32_top50v_default", False, 50),
         ("hybrid", "AE_top25v_tuned", root / "optuna" / "ae_lgbm_ld32_top25v_tuned", True, 25),
+        (
+            "hybrid_reconstruction",
+            "AE_top25v_recon_fixed_from_hybrid_tuned",
+            root / "ae_lgbm_ld32_top25v_recon_fixed_from_hybrid_tuned",
+            True,
+            25,
+        ),
+        (
+            "hybrid_reconstruction",
+            "AE_top25v_recon_tuned",
+            root / "optuna" / "ae_lgbm_ld32_top25v_recon_tuned",
+            True,
+            25,
+        ),
     ]
 
     rows: list[dict[str, object]] = []

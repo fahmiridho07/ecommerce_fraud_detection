@@ -51,6 +51,22 @@ After rerunning P01–P04 with the missingness-preserving AE pipeline under `out
 
 Post-fix test PR-AUC: P02 **0.5049** > P01 0.4858 > P04 0.4845 > P03 0.4802.
 
+## Narrative Governance
+
+**AE-05 met the decision gate (2026-06-16):** test PR-AUC **0.5098** > P02 **0.5049**, bootstrap 95% CI excludes zero.
+
+- **Historical proposal block:** P01–P04 remain in `initial_proposal_comparison.csv` (latent replacement does not beat P02).
+- **Active thesis candidate:** AE-05 in `extended_proposal_comparison.csv`.
+- Update Bab hasil/kesimpulan to document both blocks explicitly; do not erase P01–P04 history.
+
+## Post-Diagnostic Candidate (AE-05)
+
+AE-05 has now met the decision gate as an engineering candidate: hybrid top-25 `V*` retention + LD32 AE latent features + global AE reconstruction-error features reached test PR-AUC **0.509821**, above P02 **0.504900**. Paired bootstrap on the chronological test rows gives a PR-AUC delta of **+0.004921** with 95% CI **[+0.000650, +0.009316]**.
+
+Artifact path: `outputs/initial_proposal/ae_lgbm_ld32_top25v_recon_fixed_from_hybrid_tuned/`.
+
+Do not silently rewrite old P01-P04 historical conclusions. Instead, treat AE-05 as the active candidate for a revised thesis narrative and document the transition explicitly in the methodology/results chapter.
+
 ## Open Items (Not Blockers For Scope)
 
 These are documented limitations, not reasons to reopen archived branches:
@@ -58,4 +74,4 @@ These are documented limitations, not reasons to reopen archived branches:
 - P03 (LD32 default) vs P04 (LD128 tuned) is a partially asymmetric comparison.
 - Post-fix Optuna runs used 15 trials; 50 trials may be needed before defense if reviewers question tuning stability.
 - Diagnostics: `src/generate_initial_proposal_diagnostics.py` → `outputs/initial_proposal/diagnostics/`.
-- Representation ablation AE-03 (top-25 `V*` + LD32 latent, no tuning) nearly matches P01 test AP (0.4853 vs 0.4858). See `outputs/initial_proposal/representation_ablation/`.
+- Representation ablation: AE-03 default test AP 0.4853; hybrid tuned AE-04 test AP 0.5036; AE-05 hybrid + reconstruction error test AP 0.5098. Metrics: `outputs/initial_proposal/representation_ablation/significance_comparison.csv`.

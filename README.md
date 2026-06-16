@@ -13,25 +13,27 @@ This repository is scoped to the original thesis proposal path (P01–P04):
 
 The source of truth is [`docs/THESIS_SCOPE.md`](docs/THESIS_SCOPE.md). Exploratory branches are parked under [`archive/`](archive/).
 
-**Post-fix rerun completed (2026-06-16).** Canonical artifacts: `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`.
+**Post-fix rerun completed (2026-06-16).** Proposal rerun: `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`. Extended table (includes AE-05): `extended_proposal_comparison.csv`.
 
 ## Active Experiments
 
 | ID | Experiment | Test PR-AUC | Role |
 |----|------------|-------------|------|
-| P01 / BASE-01 | Baseline LightGBM default | 0.4858 | Primary baseline |
-| P02 / BASE-02 | Baseline LightGBM Optuna tuned (15 trials) | **0.5049** | Best model |
+| P01 / BASE-01 | Baseline LightGBM default | 0.4858 | Proposal baseline |
+| P02 / BASE-02 | Baseline LightGBM Optuna tuned (15 trials) | 0.5049 | Tuned baseline (proposal) |
 | P03 / AE-01 | AE-LightGBM LD32 + missing indicators | 0.4802 | Proposal AE default |
 | P04 / AE-02 | AE-LightGBM LD128 Optuna tuned (15 trials) | 0.4845 | Tuned AE (LD128 caveat) |
+| **AE-05** | Hybrid top-25 `V*` + LD32 latent + recon error | **0.5098** | **Best model (post-diagnostic)** |
 
-The tuned baseline (P02) remains stronger than the AE-LightGBM branch after the missingness-preserving fix. That is a valid and defensible thesis result.
+P01–P04 answer the original proposal (latent replacement loses to P02). **AE-05** answers the refined integration path: retain high-gain `V*`, add AE latent + reconstruction-error features — beats P02 on test PR-AUC (+0.0049, bootstrap p≈0.009). See [`docs/EXPERIMENT_REGISTRY.md`](docs/EXPERIMENT_REGISTRY.md) and [`docs/DEFENSE_FAQ.md`](docs/DEFENSE_FAQ.md).
 
 Legacy artifacts under `outputs/baseline_lgbm/` and `outputs/ae_lgbm/` reflect the pre-fix pipeline (125/221 features, zero-fill AE). Use `outputs/initial_proposal/` for thesis-facing numbers.
 
 ## Navigation
 
 - [`docs/THESIS_SCOPE.md`](docs/THESIS_SCOPE.md) - active thesis scope and exclusion rules.
-- [`docs/EXPERIMENT_REGISTRY.md`](docs/EXPERIMENT_REGISTRY.md) - compact experiment registry for P01-P04.
+- [`docs/EXPERIMENT_REGISTRY.md`](docs/EXPERIMENT_REGISTRY.md) - experiment registry (P01-P04 + AE-05).
+- [`docs/DEFENSE_FAQ.md`](docs/DEFENSE_FAQ.md) - sidang Q&A (metrik, protokol, AE-05).
 - [`docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`](docs/INITIAL_PROPOSAL_RERUN_GUIDE.md) - exact rerun commands for the proposal path.
 - [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) - environment, validation, and artifact policy.
 - [`src/README.md`](src/README.md) - script index for the remaining active source files.

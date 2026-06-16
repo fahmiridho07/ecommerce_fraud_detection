@@ -21,12 +21,24 @@ This directory is now intentionally narrow. It contains only the active proposal
   - `--model_type baseline_lgbm`
   - `--model_type ae_lgbm_ld128`
 - `build_initial_proposal_comparison.py` - builds the four-row P01-P04 comparison.
+- `build_extended_proposal_comparison.py` - builds P01-P04 plus AE-05 extended comparison.
 - `generate_initial_proposal_diagnostics.py` - in-depth diagnostics from saved P01-P04 artifacts (missingness signal, V gain share, AE drift).
+- `generate_preprocessing_diagnostics.py` - preprocessing-only diagnostics for split composition, missingness drift, categorical unseen rates, and numeric distribution shift.
 - `build_representation_ablation_comparison.py` - compares P01, P03, and hybrid top-V AE runs.
+- `run_top_v_retention_sweep.py` - sweeps top-K retained `V*` hybrid models.
+- `build_significance_comparison.py` - canonical P01-P04 vs hybrid significance table.
 - `train_ae_lgbm.py --retain-top-v-features K` - hybrid representation ablation (latent + top baseline `V*`).
+- `tune_lgbm_optuna.py --model_type ae_lgbm_ld32_hybrid` - Optuna tuning for hybrid AE-LightGBM.
 - `train_ae_reconstruction_error_lgbm.py` - post-fix ablation that keeps all original baseline features and appends LD128 AE reconstruction-error features.
+- `train_autoencoder_normal_masked.py` - normal-only, mask-aware, lightly denoising AE that saves global and grouped reconstruction features.
+- `generate_ae_reconstruction_feature_tables.py` - derives grouped reconstruction feature tables from an existing saved AE.
+- `train_ae_reconstruction_feature_lgbm.py` - LightGBM augmentation using original features plus grouped AE reconstruction features.
+- `tune_ae_hybrid_reconstruction_lgbm.py` - AE-05 candidate: top-V hybrid LD32 latent features plus global reconstruction-error anomaly features.
+- `compare_ae_hybrid_recon_bootstrap.py` - paired bootstrap comparison of AE-05 against the tuned baseline.
+- `enhanced_preprocessing.py` - train-only rare bucketing and drift-aware categorical normalization helpers.
+- `train_enhanced_preprocessing_lgbm.py` - preprocessing ablation for tuned baseline or AE-05 (separate from canonical pipeline).
 
-Canonical thesis artifacts (post-fix rerun): `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`. Script defaults still write to legacy `outputs/baseline_lgbm/` and `outputs/ae_lgbm/`; use directory overrides from `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md` for isolated reruns.
+Canonical thesis artifacts (post-fix rerun): `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`. Extended table: `extended_proposal_comparison.csv`. Script defaults still write to legacy `outputs/baseline_lgbm/` and `outputs/ae_lgbm/`; use directory overrides from `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md` for isolated reruns.
 
 ## Validation
 
