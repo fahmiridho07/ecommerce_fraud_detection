@@ -20,10 +20,12 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from config import (
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     PROJECT_ROOT,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -43,7 +45,8 @@ from preprocessing import (
     get_v_feature_columns,
     split_features_target,
 )
-from splitting import chronological_split
+from splitting import create_holdout_split
+from train_ae_lgbm import validate_latent_split_manifest_alignment
 from train_baseline_lgbm import (
     DEFAULT_THRESHOLD,
     EARLY_STOPPING_ROUNDS,
@@ -314,6 +317,7 @@ def main(
     phase_name: str = "AE_NORMAL_MASKED_GROUPED_ERRORS_LD128_default_lgbm",
     expected_feature_prefix: str = "normal_masked_ae_",
     require_normal_only: bool = True,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     output_dir = ensure_dir(output_dir)
@@ -327,8 +331,17 @@ def main(
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
+    validate_latent_split_manifest_alignment(
+        ae_feature_dir,
+        train_df,
+        valid_df,
+        test_df,
+    )
     v_columns = get_v_feature_columns(train_df)
 
     log("Separating target and fitting train-only baseline preprocessing.")
@@ -478,6 +491,7 @@ def main(
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -589,6 +603,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Allow grouped features generated from a non-normal-only masked-loss AE.",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     return parser.parse_args()
 
 
@@ -601,4 +621,5 @@ if __name__ == "__main__":
         phase_name=args.phase_name,
         expected_feature_prefix=args.expected_feature_prefix,
         require_normal_only=not args.allow_non_normal_source,
+        split_strategy=args.split_strategy,
     )

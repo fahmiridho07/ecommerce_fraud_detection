@@ -37,8 +37,10 @@ from config import (
     AUTOENCODER_OUTPUT_DIR,
     AUTOENCODER_ROBUST_OUTPUT_DIR,
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TEST_RATIO,
     TRAIN_RATIO,
     VALID_RATIO,
@@ -46,7 +48,7 @@ from config import (
 from train_ae_lgbm import save_latent_split_manifest
 from data_loader import load_labeled_train_data
 from preprocessing import get_v_feature_columns
-from splitting import chronological_split
+from splitting import create_holdout_split
 from utils import ensure_dir, log, save_json, set_seed
 
 
@@ -89,8 +91,8 @@ def build_masked_targets(X: np.ndarray, observed_mask: np.ndarray) -> np.ndarray
 def masked_mse_loss(y_true, y_pred):
     """Mean squared reconstruction loss over originally observed V-feature cells."""
     input_dim = tf.shape(y_pred)[1]
-    target = y_true[:, :input_dim]
-    observed_mask = y_true[:, input_dim:]
+    target = tf.cast(y_true[:, :input_dim], y_pred.dtype)
+    observed_mask = tf.cast(y_true[:, input_dim:], y_pred.dtype)
     squared_error = tf.square(target - y_pred) * observed_mask
     denominator = tf.maximum(tf.reduce_sum(observed_mask, axis=1), 1.0)
     return tf.reduce_sum(squared_error, axis=1) / denominator
@@ -290,6 +292,7 @@ def main(
     output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
     phase_name: str = "3B_robust_autoencoder_representation_learning",
     print_old_comparison: bool = True,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     tf.keras.utils.set_random_seed(RANDOM_SEED)
@@ -303,8 +306,11 @@ def main(
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
 
     v_columns = get_v_feature_columns(train_df)
     input_dim = len(v_columns)
@@ -375,7 +381,13 @@ def main(
         X_test,
         output_dir,
     )
-    save_latent_split_manifest(train_df, valid_df, test_df, output_dir)
+    save_latent_split_manifest(
+        train_df,
+        valid_df,
+        test_df,
+        output_dir,
+        split_strategy=split_strategy,
+    )
 
     log("Computing robust reconstruction metrics.")
     train_errors = reconstruction_errors(autoencoder, X_train, observed_train, AE_BATCH_SIZE)
@@ -428,6 +440,7 @@ def main(
         "output_dir": str(output_dir),
         "sample_size": SAMPLE_SIZE,
         "is_local_debugging_sample": SAMPLE_SIZE is not None,
+        "split_strategy": split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -534,6 +547,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not print comparison against the original unstable Autoencoder.",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     return parser.parse_args()
 
 
@@ -544,4 +563,5 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         phase_name=args.phase_name,
         print_old_comparison=not args.no_old_comparison,
+        split_strategy=args.split_strategy,
     )

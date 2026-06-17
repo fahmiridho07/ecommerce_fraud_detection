@@ -1,5 +1,8 @@
 # Preprocessing Diagnostic
 
+Status: archived chronological diagnostic. Superseded by the 2026-06-17
+stratified split reset.
+
 Generated after the AE-05 candidate run. This note focuses on data preparation rather than model architecture or hyperparameter search.
 
 ## Current Preprocessing Contract
@@ -122,7 +125,7 @@ Rationale: AE-05 shows reconstruction error is valuable, but the AE input repres
 - Do not median-impute all numeric features for LightGBM.
 - Do not fit encoders, rare buckets, scalers, or imputers on validation/test.
 - Do not silently replace the AE-05 result with broad feature-engineering branches; each preprocessing family should be ablated independently.
-- Keep P02 tuned baseline and AE-05 as the main comparison pair for preprocessing experiments.
+- Within this archived chronological diagnostic only, P02 and AE-05 were the main comparison pair; after the stratified reset, use the strongest A1 baseline as the comparison target.
 
 ## Executed Ablation: Enhanced Identity/Device Preprocessing
 
@@ -237,4 +240,4 @@ Interpretation:
 - The strongest fixed-parameter preprocessing candidate is now the LightGBM baseline with frequency encoding, compact missingness summaries, and time/amount features.
 - The gain over enhanced identity/device preprocessing is positive under paired bootstrap, so this result is strong enough to document as the current best preprocessing extension.
 - AE reconstruction error remains high-gain in feature importance, but adding it to the strongest preprocessing baseline reduced test AP from 0.524197 to 0.521442. AE-05 also stayed below the strongest baseline on PR-AUC.
-- The current evidence therefore supports a thesis-facing preprocessing conclusion: for IEEE-CIS under this chronological split, literature-aligned tabular preprocessing improves ranking quality more reliably than additional AE integration before tuning.
+- The historical chronological evidence suggests that literature-aligned tabular preprocessing improved ranking quality more reliably than additional AE integration before tuning, but this must be rerun under the active stratified protocol before it becomes a thesis-facing conclusion.

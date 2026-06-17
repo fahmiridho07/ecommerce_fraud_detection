@@ -25,9 +25,11 @@ from config import (
     AUTOENCODER_ROBUST_OUTPUT_DIR,
     BASELINE_OUTPUT_DIR,
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -49,7 +51,7 @@ from preprocessing import (
     get_v_feature_columns,
     transform_categorical_columns,
 )
-from splitting import chronological_split
+from splitting import create_holdout_split
 from utils import ensure_dir, log, save_json, set_seed
 
 
@@ -57,7 +59,10 @@ DEFAULT_THRESHOLD = 0.5
 EARLY_STOPPING_ROUNDS = 100
 LATENT_SPLIT_MANIFEST_CSV = "latent_split_manifest.csv"
 LATENT_SPLIT_MANIFEST_JSON = "latent_split_manifest_summary.json"
-LATENT_SPLIT_MANIFEST_SORT_ORDER = "TransactionDT asc, TransactionID asc"
+LATENT_SPLIT_MANIFEST_ROW_ORDER_NOTE = (
+    "Row order after the configured split strategy; latent row i must align to "
+    "manifest row i within the same split."
+)
 
 
 def average_precision_eval(y_true, y_pred):
@@ -161,6 +166,7 @@ def save_latent_split_manifest(
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
     output_dir: Path,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> None:
     """Persist split row order beside latent arrays for downstream alignment checks."""
     manifest_df = build_latent_split_manifest_frame(train_df, valid_df, test_df)
@@ -190,7 +196,8 @@ def save_latent_split_manifest(
         "train_last_transaction_id": split_summaries["train"]["last_transaction_id"],
         "valid_last_transaction_id": split_summaries["validation"]["last_transaction_id"],
         "test_last_transaction_id": split_summaries["test"]["last_transaction_id"],
-        "sort_order": LATENT_SPLIT_MANIFEST_SORT_ORDER,
+        "split_strategy": split_strategy,
+        "row_order_note": LATENT_SPLIT_MANIFEST_ROW_ORDER_NOTE,
     }
     save_json(summary, output_dir / LATENT_SPLIT_MANIFEST_JSON)
 
@@ -250,7 +257,8 @@ def validate_latent_split_manifest_alignment(
                 f"manifest={expected_ids[mismatch_index]!r}, "
                 f"current={actual_ids[mismatch_index]!r}. "
                 "Latent row i must align to split row i; rerun the matching "
-                "Autoencoder training or restore the frozen chronological split."
+                "Autoencoder training for the active split strategy or restore "
+                "the exact historical split used to create the latent artifacts."
             )
 
 
@@ -263,7 +271,7 @@ def validate_latent_outputs(
     valid_rows: int,
     test_rows: int,
 ) -> None:
-    """Validate robust latent arrays align to the Phase 1 temporal split."""
+    """Validate robust latent arrays align to the current train/valid/test split."""
     expected = {
         "train": (latent_train, train_rows),
         "validation": (latent_valid, valid_rows),
@@ -574,13 +582,17 @@ def prepare_ae_lgbm_training_data(
     autoencoder_output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
     retain_top_v_features: int | None = None,
     baseline_importance_path: Path | None = None,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> AELGBMTrainingData:
     """Build AE-LightGBM feature matrices without fitting the classifier."""
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     v_columns = get_v_feature_columns(train_df)
     retained_v_columns: list[str] = []
     if retain_top_v_features is not None:
@@ -719,6 +731,7 @@ def main(
     retain_top_v_features: int | None = None,
     baseline_importance_path: Path | None = None,
     baseline_metrics_path: Path | None = None,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     output_dir = ensure_dir(output_dir)
@@ -727,6 +740,7 @@ def main(
         autoencoder_output_dir=autoencoder_output_dir,
         retain_top_v_features=retain_top_v_features,
         baseline_importance_path=baseline_importance_path,
+        split_strategy=split_strategy,
     )
     X_train = prepared.X_train
     X_valid = prepared.X_valid
@@ -867,9 +881,11 @@ def main(
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": split_strategy,
         "transactiondt_note": (
-            "TransactionDT is kept as a non-V model feature and was also used "
-            "to create the chronological split."
+            "TransactionDT is kept as a non-V model feature. The active thesis "
+            "reset uses stratified holdout by default; chronological splitting "
+            "remains available only for historical artifact reproduction."
         ),
         "split_ratios": {
             "train": TRAIN_RATIO,
@@ -994,6 +1010,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional baseline metrics JSON for comparison_against_baseline.json.",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     return parser.parse_args()
 
 
@@ -1006,4 +1028,5 @@ if __name__ == "__main__":
         retain_top_v_features=args.retain_top_v_features,
         baseline_importance_path=args.baseline_importance_path,
         baseline_metrics_path=args.baseline_metrics_path,
+        split_strategy=args.split_strategy,
     )

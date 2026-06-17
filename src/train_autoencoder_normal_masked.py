@@ -34,9 +34,11 @@ from config import (
     AE_PATIENCE,
     AE_USE_SCALED_CLIPPING,
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     PROJECT_ROOT,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TRAIN_RATIO,
@@ -44,7 +46,7 @@ from config import (
 )
 from data_loader import load_labeled_train_data
 from preprocessing import get_v_feature_columns
-from splitting import chronological_split
+from splitting import create_holdout_split
 from train_ae_lgbm import save_latent_split_manifest
 from train_autoencoder_robust import (
     build_median_imputer,
@@ -289,9 +291,21 @@ def main(
     phase_name: str = "normal_only_mask_aware_autoencoder_ld128",
     input_noise_std: float = DEFAULT_INPUT_NOISE_STD,
     training_subset: str = "normal",
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
+    max_epochs: int = AE_MAX_EPOCHS,
+    patience: int = AE_PATIENCE,
+    batch_size: int = AE_BATCH_SIZE,
 ) -> dict[str, object]:
     if training_subset not in {"normal", "all"}:
         raise ValueError(f"Unsupported training_subset: {training_subset}")
+    if split_strategy not in {"chronological", "stratified_holdout"}:
+        raise ValueError(f"Unsupported split_strategy: {split_strategy}")
+    if max_epochs <= 0:
+        raise ValueError("max_epochs must be positive.")
+    if patience <= 0:
+        raise ValueError("patience must be positive.")
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive.")
     set_seed(RANDOM_SEED)
     tf.keras.utils.set_random_seed(RANDOM_SEED)
     output_dir = ensure_dir(output_dir)
@@ -299,8 +313,11 @@ def main(
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     v_columns = get_v_feature_columns(train_df)
     value_dim = len(v_columns)
     subset_counts = normal_subset_counts(train_df, valid_df, test_df)
@@ -341,7 +358,7 @@ def main(
         input_noise_std=input_noise_std,
     )
 
-    y_fit_masked = build_masked_targets(X_fit_target, observed_fit)
+    y_fit_masked = build_masked_targets(X_fit_target, observed_fit).astype("float16")
     if training_subset == "normal":
         valid_fit_mask = valid_df[TARGET_COL].to_numpy(dtype=int) == 0
         if not valid_fit_mask.any():
@@ -350,25 +367,29 @@ def main(
         y_valid_fit_masked = build_masked_targets(
             X_valid_target[valid_fit_mask],
             observed_valid[valid_fit_mask],
-        )
+        ).astype("float16")
     else:
         X_valid_fit_input = X_valid_input
-        y_valid_fit_masked = build_masked_targets(X_valid_target, observed_valid)
+        y_valid_fit_masked = build_masked_targets(X_valid_target, observed_valid).astype("float16")
 
     log(f"Training on {training_subset} train rows; early stopping on matching validation rows.")
     history = autoencoder.fit(
         X_fit_input,
         y_fit_masked,
         validation_data=(X_valid_fit_input, y_valid_fit_masked),
-        epochs=AE_MAX_EPOCHS,
-        batch_size=AE_BATCH_SIZE,
+        epochs=max_epochs,
+        batch_size=batch_size,
         shuffle=True,
         callbacks=[
             keras.callbacks.EarlyStopping(
                 monitor="val_loss",
-                patience=AE_PATIENCE,
+                patience=patience,
                 restore_best_weights=True,
-            )
+            ),
+            keras.callbacks.CSVLogger(
+                str(output_dir / "ae_training_live_log.csv"),
+                append=False,
+            ),
         ],
         verbose=2,
     )
@@ -380,13 +401,13 @@ def main(
     best_validation_loss = float(history_df.loc[best_epoch_index, "val_loss"])
 
     log("Encoding all split rows.")
-    latent_train = encoder.predict(X_train_input, batch_size=AE_BATCH_SIZE, verbose=0).astype(
+    latent_train = encoder.predict(X_train_input, batch_size=batch_size, verbose=0).astype(
         "float32"
     )
-    latent_valid = encoder.predict(X_valid_input, batch_size=AE_BATCH_SIZE, verbose=0).astype(
+    latent_valid = encoder.predict(X_valid_input, batch_size=batch_size, verbose=0).astype(
         "float32"
     )
-    latent_test = encoder.predict(X_test_input, batch_size=AE_BATCH_SIZE, verbose=0).astype(
+    latent_test = encoder.predict(X_test_input, batch_size=batch_size, verbose=0).astype(
         "float32"
     )
     np.save(output_dir / "latent_train.npy", latent_train)
@@ -396,7 +417,13 @@ def main(
         f"{feature_prefix}_latent_{index:03d}" for index in range(1, latent_dim + 1)
     ]
     save_json(latent_feature_names, output_dir / "latent_feature_names.json")
-    save_latent_split_manifest(train_df, valid_df, test_df, output_dir)
+    save_latent_split_manifest(
+        train_df,
+        valid_df,
+        test_df,
+        output_dir,
+        split_strategy=split_strategy,
+    )
 
     log("Computing global and grouped reconstruction-error features.")
     train_errors = reconstruction_errors(
@@ -404,21 +431,21 @@ def main(
         X_train_input,
         X_train_target,
         observed_train,
-        AE_BATCH_SIZE,
+        batch_size,
     )
     valid_errors = reconstruction_errors(
         autoencoder,
         X_valid_input,
         X_valid_target,
         observed_valid,
-        AE_BATCH_SIZE,
+        batch_size,
     )
     test_errors = reconstruction_errors(
         autoencoder,
         X_test_input,
         X_test_target,
         observed_test,
-        AE_BATCH_SIZE,
+        batch_size,
     )
     save_reconstruction_errors(train_errors, output_dir / "reconstruction_error_train.csv")
     save_reconstruction_errors(valid_errors, output_dir / "reconstruction_error_valid.csv")
@@ -431,7 +458,7 @@ def main(
             X_train_target,
             observed_train,
             group_indices,
-            AE_BATCH_SIZE,
+            batch_size,
             feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_train.csv",
@@ -443,7 +470,7 @@ def main(
             X_valid_target,
             observed_valid,
             group_indices,
-            AE_BATCH_SIZE,
+            batch_size,
             feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_valid.csv",
@@ -455,7 +482,7 @@ def main(
             X_test_target,
             observed_test,
             group_indices,
-            AE_BATCH_SIZE,
+            batch_size,
             feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_test.csv",
@@ -494,6 +521,7 @@ def main(
         "output_dir": str(output_dir),
         "sample_size": SAMPLE_SIZE,
         "is_local_debugging_sample": SAMPLE_SIZE is not None,
+        "split_strategy": split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -551,9 +579,12 @@ def main(
             "loss_observed_cells_only": True,
             "optimizer": "Adam",
             "learning_rate": AE_LEARNING_RATE,
-            "batch_size": AE_BATCH_SIZE,
-            "max_epochs": AE_MAX_EPOCHS,
-            "patience": AE_PATIENCE,
+            "batch_size": batch_size,
+            "default_batch_size": AE_BATCH_SIZE,
+            "max_epochs": max_epochs,
+            "default_max_epochs": AE_MAX_EPOCHS,
+            "patience": patience,
+            "default_patience": AE_PATIENCE,
             "best_epoch": best_epoch,
             "best_validation_loss": best_validation_loss,
             "random_seed": RANDOM_SEED,
@@ -617,6 +648,15 @@ def parse_args() -> argparse.Namespace:
         default="normal",
         help="Rows used to fit the AE: normal train rows or the full train split.",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
+    parser.add_argument("--max-epochs", type=int, default=AE_MAX_EPOCHS)
+    parser.add_argument("--patience", type=int, default=AE_PATIENCE)
+    parser.add_argument("--batch-size", type=int, default=AE_BATCH_SIZE)
     return parser.parse_args()
 
 
@@ -628,4 +668,8 @@ if __name__ == "__main__":
         phase_name=args.phase_name,
         input_noise_std=args.input_noise_std,
         training_subset=args.training_subset,
+        split_strategy=args.split_strategy,
+        max_epochs=args.max_epochs,
+        patience=args.patience,
+        batch_size=args.batch_size,
     )

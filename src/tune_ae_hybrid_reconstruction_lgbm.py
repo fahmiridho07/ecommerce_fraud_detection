@@ -37,10 +37,12 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from config import (
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     PROJECT_ROOT,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -54,8 +56,11 @@ from evaluation import (
     selected_threshold_from_table,
     threshold_selection_table,
 )
-from splitting import chronological_split
-from train_ae_lgbm import prepare_ae_lgbm_training_data
+from splitting import create_holdout_split
+from train_ae_lgbm import (
+    prepare_ae_lgbm_training_data,
+    validate_latent_split_manifest_alignment,
+)
 from train_ae_reconstruction_error_lgbm import (
     LOG_RECONSTRUCTION_ERROR_FEATURE,
     RECONSTRUCTION_ERROR_FEATURE,
@@ -136,6 +141,7 @@ class PreparedHybridReconData:
     preprocessing: dict[str, object]
     preprocessing_filename: str
     feature_info: dict[str, object]
+    split_strategy: str
 
     @property
     def total_features(self) -> int:
@@ -188,17 +194,28 @@ def prepare_data(
     reconstruction_error_dir: Path,
     retain_top_v_features: int,
     baseline_importance_path: Path,
+    split_strategy: str,
 ) -> PreparedHybridReconData:
     log("Preparing hybrid LD32 AE-LightGBM matrices.")
     prepared = prepare_ae_lgbm_training_data(
         autoencoder_output_dir=autoencoder_output_dir,
         retain_top_v_features=retain_top_v_features,
         baseline_importance_path=baseline_importance_path,
+        split_strategy=split_strategy,
     )
 
     log("Loading labeled splits for row IDs and reconstruction-error validation.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
-    train_df, valid_df, test_df = chronological_split(full_df)
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
+    validate_latent_split_manifest_alignment(
+        reconstruction_error_dir,
+        train_df,
+        valid_df,
+        test_df,
+    )
 
     log("Appending global AE reconstruction-error features.")
     errors = load_reconstruction_errors(reconstruction_error_dir)
@@ -267,6 +284,7 @@ def prepare_data(
         preprocessing=prepared.preprocessing_non_v,
         preprocessing_filename="preprocessing_non_v.pkl",
         feature_info=feature_info,
+        split_strategy=split_strategy,
     )
 
 
@@ -604,6 +622,7 @@ def build_run_config(
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": prepared.split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -681,6 +700,7 @@ def run(args: argparse.Namespace) -> None:
         reconstruction_error_dir=args.reconstruction_error_dir,
         retain_top_v_features=args.retain_top_v_features,
         baseline_importance_path=args.baseline_importance_path,
+        split_strategy=args.split_strategy,
     )
 
     study: optuna.Study | None = None
@@ -812,6 +832,12 @@ def parse_args() -> argparse.Namespace:
         "--initial-proposal-dir",
         type=Path,
         default=DEFAULT_INITIAL_PROPOSAL_DIR,
+    )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
     )
     args = parser.parse_args()
     if args.n_trials < 0:

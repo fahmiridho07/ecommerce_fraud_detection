@@ -1,92 +1,116 @@
 # Thesis Scope
 
-This document is the source of truth for the cleaned repository.
+Status: active cleanup reset, 2026-06-17.
 
-## Active Research Scope
+This document is the source of truth for the cleaned repository after the split
+protocol reset. The active thesis protocol is now **stratified holdout**. Older
+chronological experiments remain documented as historical evidence only.
+
+For a compact agent-facing orientation, read `docs/AI_AGENT_BRIEF.md` after this
+file.
+
+## Active Protocol
 
 The thesis studies fraud detection on the IEEE-CIS Fraud Detection dataset using:
 
-- LightGBM as the baseline supervised model.
+- LightGBM as the supervised tabular baseline.
+- Paper-anchored preprocessing branches, starting from Alharbi-style IEEE-CIS
+  preprocessing.
 - Autoencoder representation learning on anonymized numerical `V*` features.
-- AE-LightGBM, where original `V*` values are replaced by learned latent features while `V*` missingness indicators (`v_missing_*`) are preserved for the downstream classifier.
-- Bayesian hyperparameter optimization with Optuna.
-- Post-diagnostic score-level integration, where a preprocessing-strengthened LightGBM score is combined with an AE latent-LightGBM score.
+- AE-LightGBM variants only after the stratified baseline is rerun.
+- Average Precision / PR-AUC as the primary metric, with ROC-AUC, F1, MCC, and
+  confusion matrices as supporting metrics.
 
-The historical proposal comparison remains P01-P04:
+The active data split is:
 
-| ID | Model |
-|----|-------|
-| P01 / BASE-01 | Baseline LightGBM default |
-| P02 / BASE-02 | Baseline LightGBM Optuna tuned |
-| P03 / AE-01 | AE-LightGBM default, LD32 latent replacement plus `V*` missing indicators |
-| P04 / AE-02 | AE-LightGBM Optuna tuned, LD128 latent replacement plus `V*` missing indicators |
+```text
+stratified_holdout, 60% train / 20% validation / 20% test, random_state=42
+```
 
-Canonical historical proposal artifacts: `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`.
+Guardrails:
 
-The current post-diagnostic candidate comparison is documented in:
+- Fit all imputers, encoders, scalers, frequency maps, AE preprocessors, and
+  sampling objects on the training split only.
+- Use validation only for early stopping, Optuna objective, and threshold
+  selection.
+- Use test only for final evaluation after model/threshold selection.
+- Do not balance validation or test.
+- Treat chronological/time-aware evaluation, concept drift, rolling windows, and
+  deployment realism as limitation/future-work discussion for the S1 thesis.
 
-- `docs/FINAL_CANDIDATE_VALIDATION.md`
-- `docs/BAB3_METHOD_ADJUSTMENT.md`
-- `docs/DOCX_UPDATE_NOTES.md`
-- `outputs/initial_proposal/preprocessing_ablation/final_candidate_comparison.csv`
+## Current Active Result
 
-## Out Of Scope For Current Thesis Claims
+There is **no active thesis-facing winner yet** after this reset.
 
-The following branches are parked in `archive/` and must not be used as active thesis claims without a new written decision gate:
+All metrics produced before the stratified reset are historical and must not be
+compared directly with future stratified reruns. The next valid thesis result
+must come from a clean stratified rerun.
 
-- Feature-engineered static FE branches, UID features, velocity features, and FE+AE combinations.
-- Historical broad score ensembles and three-model ensembles. The fixed two-component score ensemble documented in `docs/FINAL_CANDIDATE_VALIDATION.md` is the current post-diagnostic candidate, not part of the archived broad ensemble family.
-- Behavioral, causal behavioral, CDV, and late-fusion branches.
-- GBDT backend shootouts with XGBoost and CatBoost.
-- Selected-numerical AE, task-aware AE, Ding-style reconstruction, and other AE appendix branches.
-- Historical final report generators and notebook summaries based on broad exploratory rankings.
+## Historical Archive
+
+The chronological proposal and post-diagnostic results stay traceable because
+they explain how the project arrived here:
+
+| Block | Status | Notes |
+|-------|--------|-------|
+| P01-P04 proposal block | Archived historical chronological results | P02 was best inside this block. |
+| AE-05 hybrid branch | Archived post-diagnostic chronological candidate | First AE branch that beat P02 under the old split. |
+| Fixed 0.50 score ensemble | Archived post-diagnostic chronological candidate | Strongest old score-level evidence, not active after reset. |
+| `frequency_missingness_time_amount` preprocessing | Archived empirical diagnostic branch | Useful evidence, but not the final paper-anchored protocol. |
+
+Historical metrics can be cited only with the phrase "under the previous
+chronological protocol" and should not be mixed into new stratified tables.
+
+Detailed historical evidence lives in:
+
+```text
+archive/docs/chronological_evidence/
+```
+
+## Active Rerun Ladder
+
+Run from the narrowest defensible branch outward:
+
+1. `S0`: validate stratified split summary.
+2. `A0`: baseline LightGBM on original features under stratified holdout.
+3. `A0-T`: tuned baseline LightGBM under stratified holdout.
+4. `A1`: Alharbi-style preprocessing baseline under stratified holdout.
+5. `A1-T`: tuned A1 baseline under stratified holdout.
+6. `A1-AE`: AE-LightGBM branch using the same split and train-only fitted
+   preprocessing.
+7. `A1-E`: score-level or feature-level AE integration only if it beats the
+   strongest A1 baseline under the same stratified test split.
+
+Decision rule:
+
+- Promote a preprocessing branch only if it improves or clarifies the strongest
+  baseline under the same stratified test split.
+- Promote an AE branch only if it beats the strongest stratified baseline on
+  test AP and the paired-bootstrap confidence interval supports a positive
+  delta.
+- Otherwise, conclude that the paper-anchored LightGBM baseline is stronger
+  than the tested AE integration.
+
+## Out Of Scope
+
+These remain outside active thesis claims unless a new written decision gate is
+created:
+
+- Chronological or time-aware deployment evaluation as the main experiment.
+- SMOTE/ADASYN as a mainline method instead of appendix/robustness branch.
+- Target encoding without strict out-of-fold leakage controls.
+- Broad UID, velocity, rolling-window, behavioral, or causal feature families.
+- GBDT backend shootouts with XGBoost/CatBoost.
+- Stacking many model families or leaderboard-style broad ensembles.
+- Rewriting the thesis into a general feature-engineering benchmark.
 
 ## Source-Of-Truth Order
 
 When documents disagree, use this order:
 
 1. `docs/THESIS_SCOPE.md`
-2. `docs/EXPERIMENT_REGISTRY.md`
-3. `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`
-4. `src/README.md`
-5. `archive/README.md`
-
-## Decision Rule (Post-Fix Rerun, 2026-06-16)
-
-After rerunning P01–P04 with the missingness-preserving AE pipeline under `outputs/initial_proposal/`, the repository supports this thesis conclusion:
-
-> Under the chronological IEEE-CIS split used in this project, Optuna-tuned LightGBM on the original features (P02) outperforms the AE-LightGBM latent replacement branch (P03 and P04), even after preserving `V*` missingness through `v_missing_*` indicators and training the Autoencoder with median imputation, masked reconstruction loss, and a linear latent layer.
-
-Post-fix test PR-AUC: P02 **0.5049** > P01 0.4858 > P04 0.4845 > P03 0.4802.
-
-## Narrative Governance
-
-**Fixed score ensemble met the strongest current decision gate (2026-06-17):** test PR-AUC **0.529114** > preprocessing-strengthened baseline **0.524197**, with paired-bootstrap delta **+0.004917** and 95% CI **[+0.003177, +0.006720]**.
-
-- **Historical proposal block:** P01-P04 remain in `initial_proposal_comparison.csv`.
-- **Intermediate candidate:** AE-05 remains traceable as the first AE branch to beat P02.
-- **Current thesis candidate:** fixed 0.50 score-level ensemble documented in `docs/FINAL_CANDIDATE_VALIDATION.md`.
-- The thesis claim should be framed as AE providing a complementary score signal, not as AE replacing LightGBM or raw tabular features.
-
-**AE-05 met the decision gate (2026-06-16):** test PR-AUC **0.5098** > P02 **0.5049**, bootstrap 95% CI excludes zero.
-
-- **Historical proposal block:** P01–P04 remain in `initial_proposal_comparison.csv` (latent replacement does not beat P02).
-- **Active thesis candidate:** AE-05 in `extended_proposal_comparison.csv`.
-- Update Bab hasil/kesimpulan to document both blocks explicitly; do not erase P01–P04 history.
-
-## Post-Diagnostic Candidate (AE-05)
-
-AE-05 has now met the decision gate as an engineering candidate: hybrid top-25 `V*` retention + LD32 AE latent features + global AE reconstruction-error features reached test PR-AUC **0.509821**, above P02 **0.504900**. Paired bootstrap on the chronological test rows gives a PR-AUC delta of **+0.004921** with 95% CI **[+0.000650, +0.009316]**.
-
-Artifact path: `outputs/initial_proposal/ae_lgbm_ld32_top25v_recon_fixed_from_hybrid_tuned/`.
-
-Do not silently rewrite old P01-P04 historical conclusions. Instead, treat AE-05 as the active candidate for a revised thesis narrative and document the transition explicitly in the methodology/results chapter.
-
-## Open Items (Not Blockers For Scope)
-
-These are documented limitations, not reasons to reopen archived branches:
-
-- P03 (LD32 default) vs P04 (LD128 tuned) is a partially asymmetric comparison.
-- Post-fix Optuna runs used 15 trials; 50 trials may be needed before defense if reviewers question tuning stability.
-- Diagnostics: `src/generate_initial_proposal_diagnostics.py` → `outputs/initial_proposal/diagnostics/`.
-- Representation ablation: AE-03 default test AP 0.4853; hybrid tuned AE-04 test AP 0.5036; AE-05 hybrid + reconstruction error test AP 0.5098. Metrics: `outputs/initial_proposal/representation_ablation/significance_comparison.csv`.
+2. `docs/STRATIFIED_SPLIT_RESET.md`
+3. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+4. `docs/EXPERIMENT_REGISTRY.md`
+5. `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`
+6. `src/README.md`

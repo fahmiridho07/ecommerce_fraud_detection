@@ -2,11 +2,14 @@
 
 Indeks 55 referensi. **Kartu ringkas** di `_cards/`; **PDF** di `2. Reference/` adalah source of truth untuk angka dan kutipan.
 
+Status note: experiment metrics listed here are historical chronological
+references unless explicitly marked as stratified rerun results.
+
 ## Thesis experiment baseline (bandingkan ke literatur)
 
 | Model | Test AP | Catatan |
 |-------|---------|---------|
-| P02 BASE-02 (tuned LGBM) | **0.5049** | Protokol chronological — `EXPERIMENT_REGISTRY.md` |
+| P02 BASE-02 (tuned LGBM) | **0.5049** | Protokol chronological - `archive/docs/chronological_evidence/HISTORICAL_EXPERIMENT_REGISTRY.md` |
 | Moradi 2025 (literature) | 0.891 AUC-PR | FE + SMOTE; **tidak comparable** |
 | P02 vs prevalence ~3.5% | — | Laporkan no-skill baseline (Williams 2021) |
 

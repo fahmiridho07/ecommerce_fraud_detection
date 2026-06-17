@@ -2,7 +2,7 @@
 
 This script performs no model training. It inspects the data transformations
 that happen before baseline/AE modeling:
-- chronological split composition
+- configured split composition
 - feature type counts
 - missingness by feature family and split
 - train-fitted categorical mapping unknown rates
@@ -18,7 +18,15 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from config import ID_COL, PROJECT_ROOT, SAMPLE_SIZE, TARGET_COL, TIME_COL
+from config import (
+    DEFAULT_SPLIT_STRATEGY,
+    ID_COL,
+    PROJECT_ROOT,
+    SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
+    TARGET_COL,
+    TIME_COL,
+)
 from data_loader import load_labeled_train_data
 from preprocessing import (
     MISSING_CATEGORY,
@@ -28,7 +36,7 @@ from preprocessing import (
     get_v_feature_columns,
     split_features_target,
 )
-from splitting import chronological_split
+from splitting import create_holdout_split
 from utils import ensure_dir, log, save_json
 
 
@@ -228,13 +236,19 @@ def records(frame: pd.DataFrame, limit: int | None = None) -> list[dict[str, obj
     return working.replace({np.nan: None}).to_dict(orient="records")
 
 
-def run(output_dir: Path = DEFAULT_OUTPUT_DIR) -> None:
+def run(
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
+) -> None:
     output_dir = ensure_dir(output_dir)
     log("Loading merged labeled train data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     splits = {"train": train_df, "validation": valid_df, "test": test_df}
 
     raw_features: dict[str, pd.DataFrame] = {}
@@ -277,6 +291,7 @@ def run(output_dir: Path = DEFAULT_OUTPUT_DIR) -> None:
 
     summary = {
         "output_dir": str(output_dir),
+        "split_strategy": split_strategy,
         "split_summary": records(split_summary),
         "feature_counts": {
             row["group"]: int(row["count"]) for row in records(feature_counts)
@@ -319,12 +334,18 @@ def parse_args() -> argparse.Namespace:
         description="Generate preprocessing diagnostics without model training."
     )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    run(output_dir=args.output_dir)
+    run(output_dir=args.output_dir, split_strategy=args.split_strategy)
 
 
 if __name__ == "__main__":

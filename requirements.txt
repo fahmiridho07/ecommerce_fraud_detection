@@ -6,3 +6,4 @@ optuna
 tensorflow
 joblib
 matplotlib
+torch

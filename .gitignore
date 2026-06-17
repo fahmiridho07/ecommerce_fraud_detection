@@ -162,6 +162,7 @@ Draft_*.pdf
 # Legacy / generated local folders
 # =========================================================
 /results/
+/project/
 
 # Experiment tracking / logs
 *.log

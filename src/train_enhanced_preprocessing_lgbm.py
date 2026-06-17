@@ -25,10 +25,12 @@ except ImportError as exc:  # pragma: no cover
 
 from config import (
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     PROJECT_ROOT,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -48,7 +50,7 @@ from evaluation import (
     threshold_selection_table,
 )
 from preprocessing import get_v_feature_columns, split_features_target
-from splitting import chronological_split
+from splitting import create_holdout_split
 from train_ae_lgbm import (
     build_retained_v_features,
     build_v_missing_indicators,
@@ -843,9 +845,12 @@ def run(args: argparse.Namespace) -> None:
     set_seed(RANDOM_SEED)
     output_dir = ensure_dir(args.output_dir)
 
-    log("Loading data and creating chronological split.")
+    log(f"Loading data and creating {args.split_strategy} split.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
-    train_df, valid_df, test_df = chronological_split(full_df)
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=args.split_strategy,
+    )
 
     if args.model_type == "baseline":
         prepared = prepare_baseline_data(
@@ -916,6 +921,7 @@ def run(args: argparse.Namespace) -> None:
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": args.split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -999,6 +1005,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--baseline-importance-path", type=Path, default=DEFAULT_BASELINE_IMPORTANCE)
     parser.add_argument("--retain-top-v-features", type=int, default=25)
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     args = parser.parse_args()
     if args.n_jobs == 0:
         raise SystemExit("--n-jobs must be non-zero.")

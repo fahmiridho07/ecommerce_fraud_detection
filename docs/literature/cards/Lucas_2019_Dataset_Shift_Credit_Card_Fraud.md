@@ -9,7 +9,7 @@ method: "dataset shift quantification"
 metrics: "detection improvement under shift"
 split: "temporal"
 comparable_to_thesis: "protocol"
-thesis_use: "Bab 3 — shift harian, chronological validation"
+thesis_use: "Bab 5 — limitation/future work untuk shift harian dan evaluasi temporal"
 bab: "3"
 pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Lucas_2019_Dataset_Shift_Credit_Card_Fraud.pdf"
 ---
@@ -19,7 +19,7 @@ pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Lucas_2019_Dataset_Shift_Credit_Car
 ## Ringkasan
 
 - Populasi transaksi berubah dari hari ke hari.
-- Mendukung split berbasis TransactionDT.
+- Mendukung pembahasan concept drift dan future work split berbasis TransactionDT.
 
 ## File
 

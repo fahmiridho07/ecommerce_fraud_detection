@@ -16,10 +16,18 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from config import ID_COL, PROJECT_ROOT, RANDOM_SEED, SAMPLE_SIZE, TARGET_COL
+from config import (
+    DEFAULT_SPLIT_STRATEGY,
+    ID_COL,
+    PROJECT_ROOT,
+    RANDOM_SEED,
+    SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
+    TARGET_COL,
+)
 from data_loader import load_labeled_train_data
 from preprocessing import apply_baseline_preprocessing, split_features_target
-from splitting import chronological_split
+from splitting import create_holdout_split
 from utils import ensure_dir, save_json
 
 
@@ -37,15 +45,19 @@ def load_json(path: Path) -> dict[str, object]:
     return payload
 
 
-def load_split_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_split_data(split_strategy: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
-    _train_df, valid_df, test_df = chronological_split(full_df)
+    _train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     return valid_df, test_df
 
 
 def baseline_scores_for_split(
     split_df: pd.DataFrame,
     baseline_dir: Path,
+    split_strategy: str,
 ) -> pd.DataFrame:
     preprocessing_path = baseline_dir / "preprocessing.pkl"
     model_path = baseline_dir / "final_model.pkl"
@@ -57,6 +69,12 @@ def baseline_scores_for_split(
     preprocessing = joblib.load(preprocessing_path)
     model = joblib.load(model_path)
     run_config = load_json(run_config_path)
+    artifact_split_strategy = run_config.get("split_strategy", "chronological")
+    if artifact_split_strategy != split_strategy:
+        raise ValueError(
+            f"{baseline_dir} was produced with split_strategy={artifact_split_strategy!r}, "
+            f"but this comparison requested {split_strategy!r}."
+        )
     best_iteration = int(run_config["early_stopping"]["best_iteration"])
 
     X_raw, y = split_features_target(split_df)
@@ -139,15 +157,30 @@ def paired_bootstrap_average_precision_delta(
 
 def run(args: argparse.Namespace) -> None:
     output_dir = ensure_dir(args.output_dir)
-    valid_df, test_df = load_split_data()
+    valid_df, test_df = load_split_data(args.split_strategy)
 
-    baseline_valid = baseline_scores_for_split(valid_df, args.baseline_dir)
-    baseline_test = baseline_scores_for_split(test_df, args.baseline_dir)
+    baseline_valid = baseline_scores_for_split(
+        valid_df,
+        args.baseline_dir,
+        args.split_strategy,
+    )
+    baseline_test = baseline_scores_for_split(
+        test_df,
+        args.baseline_dir,
+        args.split_strategy,
+    )
     baseline_valid.to_csv(output_dir / "baseline_tuned_scores_validation.csv", index=False)
     baseline_test.to_csv(output_dir / "baseline_tuned_scores_test.csv", index=False)
 
     ae_valid = load_ae_scores(args.ae_dir / "scores_validation.csv")
     ae_test = load_ae_scores(args.ae_dir / "scores_test.csv")
+    ae_run_config = load_json(args.ae_dir / "run_config.json")
+    ae_split_strategy = ae_run_config.get("split_strategy", "chronological")
+    if ae_split_strategy != args.split_strategy:
+        raise ValueError(
+            f"{args.ae_dir} was produced with split_strategy={ae_split_strategy!r}, "
+            f"but this comparison requested {args.split_strategy!r}."
+        )
     aligned_valid = aligned_scores(baseline_valid, ae_valid)
     aligned_test = aligned_scores(baseline_test, ae_test)
     aligned_valid.to_csv(output_dir / "aligned_scores_validation.csv", index=False)
@@ -198,6 +231,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--n-bootstrap", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=RANDOM_SEED)
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     args = parser.parse_args()
     if args.n_bootstrap <= 0:
         raise SystemExit("--n-bootstrap must be positive.")

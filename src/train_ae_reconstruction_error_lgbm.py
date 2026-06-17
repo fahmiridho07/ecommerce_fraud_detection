@@ -20,10 +20,12 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from config import (
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     PROJECT_ROOT,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -43,8 +45,11 @@ from preprocessing import (
     get_v_feature_columns,
     split_features_target,
 )
-from splitting import chronological_split
-from train_ae_lgbm import validate_autoencoder_preprocessing_contract
+from splitting import create_holdout_split
+from train_ae_lgbm import (
+    validate_autoencoder_preprocessing_contract,
+    validate_latent_split_manifest_alignment,
+)
 from train_baseline_lgbm import (
     DEFAULT_THRESHOLD,
     EARLY_STOPPING_ROUNDS,
@@ -295,6 +300,7 @@ def main(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     initial_proposal_dir: Path = DEFAULT_INITIAL_PROPOSAL_DIR,
     phase_name: str = "AE_RECON_LD128_original_features_plus_reconstruction_error",
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> dict[str, object]:
     set_seed(RANDOM_SEED)
     output_dir = ensure_dir(output_dir)
@@ -305,8 +311,17 @@ def main(
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
+    validate_latent_split_manifest_alignment(
+        autoencoder_output_dir,
+        train_df,
+        valid_df,
+        test_df,
+    )
     v_columns = get_v_feature_columns(train_df)
 
     log("Separating target and fitting train-only baseline preprocessing.")
@@ -438,6 +453,7 @@ def main(
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -546,6 +562,12 @@ def parse_args() -> argparse.Namespace:
         "--phase-name",
         default="AE_RECON_LD128_original_features_plus_reconstruction_error",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     return parser.parse_args()
 
 
@@ -556,4 +578,5 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         initial_proposal_dir=args.initial_proposal_dir,
         phase_name=args.phase_name,
+        split_strategy=args.split_strategy,
     )

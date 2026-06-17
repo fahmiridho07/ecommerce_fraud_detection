@@ -6,9 +6,11 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from config import (
+    DEFAULT_SPLIT_STRATEGY,
     ID_COL,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -209,6 +211,25 @@ def stratified_holdout_split(
     test_df = test_df.reset_index(drop=True).copy()
     validate_holdout_split_integrity(df, train_df, valid_df, test_df, time_col=time_col)
     return train_df, valid_df, test_df
+
+
+def create_holdout_split(
+    df: pd.DataFrame,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Create the configured thesis holdout split.
+
+    The active thesis reset uses stratified holdout by default. Chronological
+    splitting remains supported for historical artifact reproduction.
+    """
+    if split_strategy == "chronological":
+        return chronological_split(df)
+    if split_strategy == "stratified_holdout":
+        return stratified_holdout_split(df)
+    raise ValueError(
+        "Unsupported split_strategy: "
+        f"{split_strategy}. Expected one of {SUPPORTED_SPLIT_STRATEGIES}."
+    )
 
 
 def stratified_kfold_splits(

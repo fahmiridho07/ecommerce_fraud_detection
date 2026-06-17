@@ -1,5 +1,9 @@
 # DOCX Update Notes
 
+Status: archived chronological DOCX update note. Superseded by the 2026-06-17
+stratified split reset; do not treat the method-update DOCX as current thesis
+prose until it is rewritten.
+
 Date: 2026-06-17
 
 Updated working copy:
@@ -25,7 +29,7 @@ The working copy updates the thesis body from Bab 3 through Bab 5:
 The update follows:
 
 - `docs/BAB3_METHOD_ADJUSTMENT.md`
-- `docs/FINAL_CANDIDATE_VALIDATION.md`
+- `archive/docs/chronological_evidence/FINAL_CANDIDATE_VALIDATION.md`
 - `docs/EXPERIMENT_REGISTRY.md`
 
 ## Method Claim
@@ -58,4 +62,3 @@ Structural QA completed:
 - Original DOCX preserved.
 
 Visual render QA was attempted with the Documents renderer, but LibreOffice/`soffice` was not available in the environment (`where soffice` returned no executable). The DOCX should be opened in Word or LibreOffice for final visual inspection before submission.
-

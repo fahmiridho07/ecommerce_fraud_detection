@@ -1,6 +1,11 @@
 # Final Candidate Validation
 
-Status: experiment evidence pack, not thesis prose.
+Status: archived chronological evidence pack, not active thesis prose.
+
+This document records the strongest candidate under the old chronological
+post-diagnostic branch. It is superseded by the 2026-06-17 stratified split
+reset. Do not promote this candidate as the current thesis result unless it is
+rerun under `split_strategy=stratified_holdout`.
 
 Methodology alignment draft:
 
@@ -8,16 +13,29 @@ Methodology alignment draft:
 docs/BAB3_METHOD_ADJUSTMENT.md
 ```
 
-Current recommended candidate:
+Preprocessing scope gate:
+
+```text
+docs/PAPER_ANCHORED_PREPROCESSING_RESET.md
+archive/docs/chronological_evidence/PREPROCESSING_DECISION_GATE.md
+```
+
+Note: this evidence pack freezes the best candidate under the old preprocessing
+ablation family. The active preprocessing layer is now under paper-anchor reset
+review.
+
+Historical recommended candidate:
 
 ```text
 fixed score ensemble = 0.5 * preprocessing-strengthened LightGBM score
                      + 0.5 * all-train mask-aware denoising AE LD32 latent-LightGBM score
 ```
 
-## Decision
+## Historical Decision
 
-Freeze the fixed 0.50 score ensemble as the current thesis-facing candidate.
+At the time of the chronological post-diagnostic run, the fixed 0.50 score
+ensemble was the strongest candidate. After the stratified reset, it is archived
+historical evidence only.
 
 Why:
 

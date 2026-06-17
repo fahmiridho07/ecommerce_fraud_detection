@@ -19,7 +19,7 @@ pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Alharbi_2026_Multi_AE_Generative_En
 ## Ringkasan
 
 - Salah satu protokol IEEE-CIS paling terdokumentasi untuk AE generatif.
-- Mengakui limitasi random split — bandingkan dengan chronological thesis.
+- Anchor utama untuk stratified/preprocessing reset; limitasi random split dibahas sebagai future work temporal.
 
 ## File
 

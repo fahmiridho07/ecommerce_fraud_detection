@@ -30,21 +30,27 @@ python src/_validate_initial_proposal_pipeline_guards.py
 
 ## Core Rerun
 
-Follow [`INITIAL_PROPOSAL_RERUN_GUIDE.md`](INITIAL_PROPOSAL_RERUN_GUIDE.md) for the isolated P01-P04 rerun. The recommended outputs are under `outputs/initial_proposal/` so historical artifacts are not overwritten.
+Follow [`STRATIFIED_SPLIT_RESET.md`](STRATIFIED_SPLIT_RESET.md) for the active
+stratified rerun. Use `outputs/stratified_reset/` so historical artifacts are
+not overwritten.
 
-A post-fix rerun was completed on **2026-06-16**. Thesis-facing metrics are in:
+A historical chronological post-fix rerun was completed on **2026-06-16**. Those
+metrics are archived in:
 
 - `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`
-- `docs/EXPERIMENT_REGISTRY.md` (tabular summary and caveats)
+- `archive/docs/chronological_evidence/HISTORICAL_EXPERIMENT_REGISTRY.md`
+  (tabular summary and caveats)
 
-Legacy exploratory runs live under `outputs/_legacy/` (including pre-fix `baseline_lgbm/`, `ae_lgbm/`, behavioral, ensemble branches). Do not cite them as current thesis results.
+Legacy exploratory runs live under `outputs/_legacy/` and `outputs/initial_proposal/`.
+Do not cite them as current thesis results after the stratified reset.
 
 ## Artifact Policy
 
 - `outputs/` is intentionally gitignored because it contains large models, arrays, metrics, and Optuna databases.
 - `data/raw/` is intentionally gitignored because it contains Kaggle data.
 - `archive/` is tracked source/documentation history, not active thesis evidence.
-- New thesis summary tables should be generated from the active P01-P04 pipeline.
+- New thesis summary tables should be generated from the active stratified reset
+  pipeline.
 
 ## Archived Validators
 

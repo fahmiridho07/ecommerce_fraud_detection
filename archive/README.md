@@ -2,6 +2,11 @@
 
 This archive parks experiments that are useful for traceability but outside the cleaned thesis proposal scope. Files are preserved instead of deleted so earlier work remains auditable.
 
+2026-06-17 update: after the stratified split reset, chronological P01-P04,
+AE-05, preprocessing-ablation, and score-ensemble outputs are treated as
+historical evidence even when their large artifacts remain under gitignored
+`outputs/initial_proposal/`.
+
 ## Folders
 
 | Folder | Contents | Use in thesis |
@@ -13,6 +18,7 @@ This archive parks experiments that are useful for traceability but outside the 
 | `source/methodology_reports/` | Split appendix, business impact diagnostics, final defense/report utilities | Reporting support only |
 | `docs/ae_appendix/` | AE appendix experiment notes | Historical documentation |
 | `docs/behavioral_fusion/` | Behavioral and fusion experiment notes | Historical documentation |
+| `docs/chronological_evidence/` | P01-P04, AE-05, old preprocessing, and score-ensemble evidence from the previous chronological protocol | Historical evidence only |
 | `docs/gbdt_wip/` | GBDT comparison plan | WIP documentation |
 | `docs/old_governance/` | Pre-cleanup maps, audits, freeze notes, and broad registries | Historical governance |
 | `notebooks/` | Historical thesis report notebook | Historical report only |

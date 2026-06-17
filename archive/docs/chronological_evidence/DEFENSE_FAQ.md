@@ -1,5 +1,12 @@
 # FAQ Sidang — Tugas Akhir IEEE-CIS Fraud Detection
 
+Status: archived chronological FAQ. Superseded by the 2026-06-17 stratified split reset. Do not use this file for defense rehearsal until it is rewritten around `docs/THESIS_SCOPE.md` and `docs/STRATIFIED_SPLIT_RESET.md`.
+
+Active defense preparation must start from `docs/AI_AGENT_BRIEF.md`,
+`docs/THESIS_SCOPE.md`, and `docs/BAB3_METHOD_ADJUSTMENT.md`. The AE-05 claims
+below are historical chronological evidence, not active post-reset thesis
+claims.
+
 Dokumen ringkas pertanyaan–jawaban untuk ujian/sidang. Menggabungkan diskusi metodologi, evaluasi, literatur, dan scope penelitian.
 
 **Hasil proposal (P01–P04):** P02 (tuned LightGBM) — Test PR-AUC **0.5049**; latent replacement (P03/P04) kalah.  
@@ -215,14 +222,14 @@ Karena **protokol tidak comparable** (split, FE, resampling, model, subset data)
 
 | Kebutuhan | Lokasi |
 |-----------|--------|
-| Scope & hasil | `docs/THESIS_SCOPE.md`, `docs/EXPERIMENT_REGISTRY.md`, `docs/DEFENSE_FAQ.md` |
+| Scope & hasil | `docs/THESIS_SCOPE.md`, `docs/EXPERIMENT_REGISTRY.md`, `archive/docs/chronological_evidence/DEFENSE_FAQ.md` |
 | Extended comparison | `outputs/initial_proposal/final_comparison/extended_proposal_comparison.csv` |
 | Bootstrap AE-05 vs P02 | `outputs/initial_proposal/representation_ablation/bootstrap_ae05_vs_p02/` |
 | Rerun P01–P04 | `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md` |
 | Artefak canonical | `outputs/initial_proposal/` |
 | Proposal/skripsi | `0. Skripsi/proposal/`, `0. Skripsi/skripsi/` |
 | PDF referensi | `2. Reference/` |
-| FAQ ini | `docs/DEFENSE_FAQ.md` |
+| FAQ ini | `archive/docs/chronological_evidence/DEFENSE_FAQ.md` |
 
 ---
 

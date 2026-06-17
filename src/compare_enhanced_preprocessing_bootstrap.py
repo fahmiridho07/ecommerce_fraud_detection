@@ -11,11 +11,16 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from config import PROJECT_ROOT, SAMPLE_SIZE
+from config import (
+    DEFAULT_SPLIT_STRATEGY,
+    PROJECT_ROOT,
+    SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
+)
 from data_loader import load_labeled_train_data
 from enhanced_preprocessing import apply_enhanced_preprocessing
 from preprocessing import split_features_target
-from splitting import chronological_split
+from splitting import create_holdout_split
 from utils import ensure_dir, save_json, set_seed
 
 
@@ -36,7 +41,11 @@ def load_json(path: Path) -> dict[str, object]:
     return payload
 
 
-def score_enhanced_baseline(output_dir: Path, test_df: pd.DataFrame) -> np.ndarray:
+def score_enhanced_baseline(
+    output_dir: Path,
+    test_df: pd.DataFrame,
+    split_strategy: str,
+) -> np.ndarray:
     model_path = output_dir / "final_model.pkl"
     preprocessing_path = output_dir / "enhanced_preprocessing.pkl"
     run_config_path = output_dir / "run_config.json"
@@ -49,6 +58,12 @@ def score_enhanced_baseline(output_dir: Path, test_df: pd.DataFrame) -> np.ndarr
         raise ValueError(
             "This bootstrap helper currently supports enhanced baseline outputs only. "
             f"Got model_type={run_config.get('model_type')} for {output_dir}."
+        )
+    artifact_split_strategy = run_config.get("split_strategy", "chronological")
+    if artifact_split_strategy != split_strategy:
+        raise ValueError(
+            f"{output_dir} was produced with split_strategy={artifact_split_strategy!r}, "
+            f"but this comparison requested {split_strategy!r}."
         )
 
     model = joblib.load(model_path)
@@ -92,12 +107,23 @@ def run(args: argparse.Namespace) -> None:
     output_dir = ensure_dir(args.output_dir)
 
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
-    _train_df, _valid_df, test_df = chronological_split(full_df)
+    _train_df, _valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=args.split_strategy,
+    )
     _X_test_raw, y_test = split_features_target(test_df)
     y_true = y_test.to_numpy()
 
-    candidate_score = score_enhanced_baseline(args.candidate_dir, test_df)
-    reference_score = score_enhanced_baseline(args.reference_dir, test_df)
+    candidate_score = score_enhanced_baseline(
+        args.candidate_dir,
+        test_df,
+        args.split_strategy,
+    )
+    reference_score = score_enhanced_baseline(
+        args.reference_dir,
+        test_df,
+        args.split_strategy,
+    )
     candidate_ap = average_precision_score(y_true, candidate_score)
     reference_ap = average_precision_score(y_true, reference_score)
     delta = candidate_ap - reference_ap
@@ -116,6 +142,7 @@ def run(args: argparse.Namespace) -> None:
     summary = {
         "candidate_dir": str(args.candidate_dir),
         "reference_dir": str(args.reference_dir),
+        "split_strategy": args.split_strategy,
         "test_rows": int(len(y_true)),
         "test_fraud_rows": int(y_true.sum()),
         "candidate_average_precision": float(candidate_ap),
@@ -149,6 +176,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--n-bootstrap", type=int, default=1000)
     parser.add_argument("--random-seed", type=int, default=42)
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     args = parser.parse_args()
     if args.n_bootstrap <= 0:
         raise SystemExit("--n-bootstrap must be positive.")

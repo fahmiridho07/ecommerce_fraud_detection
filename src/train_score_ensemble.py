@@ -19,7 +19,12 @@ import optuna
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from config import RANDOM_SEED, SAMPLE_SIZE
+from config import (
+    DEFAULT_SPLIT_STRATEGY,
+    RANDOM_SEED,
+    SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
+)
 from data_loader import load_labeled_train_data
 from enhanced_preprocessing import apply_enhanced_preprocessing
 from evaluation import (
@@ -29,7 +34,7 @@ from evaluation import (
     threshold_selection_table,
 )
 from preprocessing import split_features_target
-from splitting import chronological_split
+from splitting import create_holdout_split
 from train_ae_lgbm import validate_latent_split_manifest_alignment
 from train_baseline_lgbm import DEFAULT_THRESHOLD
 from train_enhanced_preprocessing_lgbm import add_latent_features
@@ -64,9 +69,13 @@ def load_component_scores(
     baseline_dir: Path,
     ae_dir: Path,
     autoencoder_dir: Path,
+    split_strategy: str,
 ) -> dict[str, object]:
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
-    train_df, valid_df, test_df = chronological_split(full_df)
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     X_valid_raw, y_valid = split_features_target(valid_df)
     X_test_raw, y_test = split_features_target(test_df)
 
@@ -93,7 +102,7 @@ def load_component_scores(
     if not isinstance(latent_feature_names, list):
         raise TypeError("latent_feature_names.json must contain a list.")
     if latent_valid.shape[0] != len(valid_df) or latent_test.shape[0] != len(test_df):
-        raise ValueError("AE latent row counts do not match chronological split rows.")
+        raise ValueError("AE latent row counts do not match the selected split rows.")
 
     X_valid_ae = apply_enhanced_preprocessing(X_valid_raw, ae_preprocessing)
     X_test_ae = apply_enhanced_preprocessing(X_test_raw, ae_preprocessing)
@@ -183,6 +192,7 @@ def run(args: argparse.Namespace) -> None:
         baseline_dir=args.baseline_dir,
         ae_dir=args.ae_dir,
         autoencoder_dir=args.autoencoder_dir,
+        split_strategy=args.split_strategy,
     )
 
     if args.tune_trials > 0:
@@ -320,6 +330,7 @@ def run(args: argparse.Namespace) -> None:
         "ae_dir": str(args.ae_dir),
         "autoencoder_dir": str(args.autoencoder_dir),
         "output_dir": str(output_dir),
+        "split_strategy": args.split_strategy,
         "score_formula": "ensemble = (1 - alpha) * baseline_score + alpha * ae_score",
         "selected_alpha": selected_alpha,
         "alpha_selection": alpha_selection,
@@ -378,6 +389,12 @@ def parse_args() -> argparse.Namespace:
         help="Optuna trials for validation-only alpha tuning. Use 0 for fixed alpha.",
     )
     parser.add_argument("--bootstrap-samples", type=int, default=0)
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     args = parser.parse_args()
     if not 0.0 <= args.alpha <= 1.0:
         raise SystemExit("--alpha must be in [0, 1].")

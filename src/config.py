@@ -22,6 +22,8 @@ AE_LGBM_OUTPUT_DIR = OUTPUT_DIR / "ae_lgbm"
 AE_LGBM_LD128_OUTPUT_DIR = OUTPUT_DIR / "ae_lgbm_ld128"
 OPTUNA_OUTPUT_DIR = OUTPUT_DIR / "optuna"
 FINAL_COMPARISON_OUTPUT_DIR = OUTPUT_DIR / "final_comparison"
+STRATIFIED_RESET_OUTPUT_DIR = OUTPUT_DIR / "stratified_reset"
+ALHARBI_STYLE_OUTPUT_DIR = STRATIFIED_RESET_OUTPUT_DIR / "alharbi_style_lgbm_default"
 
 RANDOM_SEED = 42
 
@@ -32,6 +34,8 @@ TIME_COL = "TransactionDT"
 TRAIN_RATIO = 0.60
 VALID_RATIO = 0.20
 TEST_RATIO = 0.20
+DEFAULT_SPLIT_STRATEGY = "stratified_holdout"
+SUPPORTED_SPLIT_STRATEGIES = ("chronological", "stratified_holdout")
 
 # Set to an integer for quick local smoke tests. Keep as None for full runs.
 SAMPLE_SIZE = None

@@ -2,6 +2,7 @@
 
 This script tunes only:
 - baseline_lgbm
+- alharbi_lgbm
 - ae_lgbm_ld128
 - ae_lgbm_ld32_hybrid
 
@@ -41,15 +42,18 @@ except ImportError as exc:  # pragma: no cover - environment dependent
 
 from config import (
     AE_LGBM_LD128_OUTPUT_DIR,
+    ALHARBI_STYLE_OUTPUT_DIR,
     AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
     AUTOENCODER_ROBUST_OUTPUT_DIR,
     BASELINE_OUTPUT_DIR,
     DATA_DIR,
+    DEFAULT_SPLIT_STRATEGY,
     FINAL_COMPARISON_OUTPUT_DIR,
     ID_COL,
     OPTUNA_OUTPUT_DIR,
     RANDOM_SEED,
     SAMPLE_SIZE,
+    SUPPORTED_SPLIT_STRATEGIES,
     TARGET_COL,
     TEST_RATIO,
     TIME_COL,
@@ -63,13 +67,17 @@ from evaluation import (
     selected_threshold_from_table,
     threshold_selection_table,
 )
+from paper_preprocessing import (
+    apply_alharbi_style_preprocessing,
+    fit_alharbi_style_preprocessing,
+)
 from preprocessing import (
     apply_baseline_preprocessing,
     fit_baseline_preprocessing,
     get_v_feature_columns,
     split_features_target,
 )
-from splitting import chronological_split
+from splitting import create_holdout_split
 from train_ae_lgbm import (
     apply_non_v_preprocessing,
     build_v_missing_indicators,
@@ -98,6 +106,7 @@ DEFAULT_N_JOBS = 4
 
 SUPPORTED_MODEL_TYPES = (
     "baseline_lgbm",
+    "alharbi_lgbm",
     "ae_lgbm_ld128",
     "ae_lgbm_ld32_hybrid",
 )
@@ -137,6 +146,7 @@ TUNING_PROFILES = {
 
 TUNED_OUTPUT_DIRS = {
     "baseline_lgbm": OPTUNA_OUTPUT_DIR / "baseline_lgbm",
+    "alharbi_lgbm": OPTUNA_OUTPUT_DIR / "alharbi_lgbm",
     "ae_lgbm_ld128": OPTUNA_OUTPUT_DIR / "ae_lgbm_ld128",
     "ae_lgbm_ld32_hybrid": OPTUNA_OUTPUT_DIR / "ae_lgbm_ld32_hybrid",
 }
@@ -188,6 +198,7 @@ class PreparedData:
     preprocessing: dict[str, object]
     preprocessing_filename: str
     feature_info: dict[str, object]
+    split_strategy: str
 
     @property
     def total_features(self) -> int:
@@ -201,11 +212,12 @@ def load_json(path: Path) -> dict[str, object]:
 
 def output_complete(output_dir: Path, model_type: str) -> bool:
     required_files = list(REQUIRED_OUTPUT_FILES)
-    preprocessing_file = (
-        "preprocessing_non_v.pkl"
-        if model_type in ("ae_lgbm_ld128", "ae_lgbm_ld32_hybrid")
-        else "preprocessing.pkl"
-    )
+    if model_type in ("ae_lgbm_ld128", "ae_lgbm_ld32_hybrid"):
+        preprocessing_file = "preprocessing_non_v.pkl"
+    elif model_type == "alharbi_lgbm":
+        preprocessing_file = "paper_preprocessing.pkl"
+    else:
+        preprocessing_file = "preprocessing.pkl"
     required_files.append(preprocessing_file)
     if not all((output_dir / file_name).exists() for file_name in required_files):
         return False
@@ -214,13 +226,18 @@ def output_complete(output_dir: Path, model_type: str) -> bool:
     return bool(run_config.get("final_training_completed", True))
 
 
-def prepare_baseline_data() -> PreparedData:
+def prepare_baseline_data(
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
+) -> PreparedData:
     """Build Phase 2 baseline matrices using train-only preprocessing."""
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
 
     log("Building baseline feature matrices.")
     X_train_raw, y_train = split_features_target(train_df)
@@ -254,17 +271,73 @@ def prepare_baseline_data() -> PreparedData:
         preprocessing=preprocessing,
         preprocessing_filename="preprocessing.pkl",
         feature_info=feature_info,
+        split_strategy=split_strategy,
     )
+
+
+def prepare_alharbi_lgbm_data(
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
+) -> PreparedData:
+    """Build A1 Alharbi-style matrices using train-only preprocessing."""
+    log("Loading labeled training data.")
+    full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
+
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
+
+    log("Building A1 Alharbi-style feature matrices.")
+    X_train_raw, y_train = split_features_target(train_df)
+    X_valid_raw, y_valid = split_features_target(valid_df)
+    X_test_raw, y_test = split_features_target(test_df)
+
+    preprocessing = fit_alharbi_style_preprocessing(X_train_raw)
+    X_train = apply_alharbi_style_preprocessing(X_train_raw, preprocessing)
+    X_valid = apply_alharbi_style_preprocessing(X_valid_raw, preprocessing)
+    X_test = apply_alharbi_style_preprocessing(X_test_raw, preprocessing)
+
+    feature_info = {
+        "branch_id": "A1-T",
+        "feature_setup": "Alharbi-style frequency/median/z-score preprocessing.",
+        "paper_anchor": preprocessing["anchor"],
+        "model_features_count": int(X_train.shape[1]),
+        "numeric_columns_count": len(preprocessing["numeric_columns"]),
+        "categorical_columns_count": len(preprocessing["categorical_columns"]),
+        "categorical_encoding": "Train-frequency encoding; unseen validation/test categories map to 0 frequency.",
+        "numeric_missing_values": "Train-median imputed, then train z-score scaled.",
+        "fit_scope": "train split only",
+    }
+
+    return PreparedData(
+        X_train=X_train,
+        X_valid=X_valid,
+        X_test=X_test,
+        y_train=y_train,
+        y_valid=y_valid,
+        y_test=y_test,
+        categorical_columns=[],
+        preprocessing=preprocessing,
+        preprocessing_filename="paper_preprocessing.pkl",
+        feature_info=feature_info,
+        split_strategy=split_strategy,
+    )
+
 
 def prepare_ae_lgbm_ld128_data(
     autoencoder_output_dir: Path = AUTOENCODER_ROBUST_LD128_OUTPUT_DIR,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> PreparedData:
     """Build Phase 4B ld128 AE-LightGBM matrices."""
     log("Loading labeled training data.")
     full_df = load_labeled_train_data(sample_size=SAMPLE_SIZE)
 
-    log("Creating chronological train/validation/test split.")
-    train_df, valid_df, test_df = chronological_split(full_df)
+    log(f"Creating {split_strategy} train/validation/test split.")
+    train_df, valid_df, test_df = create_holdout_split(
+        full_df,
+        split_strategy=split_strategy,
+    )
     v_columns = get_v_feature_columns(train_df)
 
     log(
@@ -369,12 +442,14 @@ def prepare_ae_lgbm_ld128_data(
         preprocessing=preprocessing_non_v,
         preprocessing_filename="preprocessing_non_v.pkl",
         feature_info=feature_info,
+        split_strategy=split_strategy,
     )
 
 def prepare_ae_lgbm_ld32_hybrid_data(
     autoencoder_output_dir: Path = AUTOENCODER_ROBUST_OUTPUT_DIR,
     retain_top_v_features: int = 25,
     baseline_importance_path: Path | None = None,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> PreparedData:
     """Build hybrid LD32 AE-LightGBM matrices with retained top-V features."""
     if baseline_importance_path is None:
@@ -385,6 +460,7 @@ def prepare_ae_lgbm_ld32_hybrid_data(
         autoencoder_output_dir=autoencoder_output_dir,
         retain_top_v_features=retain_top_v_features,
         baseline_importance_path=baseline_importance_path,
+        split_strategy=split_strategy,
     )
     if len(prepared.latent_feature_names) != EXPECTED_LD32_LATENT_DIM:
         raise ValueError(
@@ -428,6 +504,7 @@ def prepare_ae_lgbm_ld32_hybrid_data(
         preprocessing=prepared.preprocessing_non_v,
         preprocessing_filename="preprocessing_non_v.pkl",
         feature_info=feature_info,
+        split_strategy=split_strategy,
     )
 
 
@@ -436,15 +513,19 @@ def prepare_data(
     autoencoder_output_dir: Path | None = None,
     retain_top_v_features: int | None = None,
     baseline_importance_path: Path | None = None,
+    split_strategy: str = DEFAULT_SPLIT_STRATEGY,
 ) -> PreparedData:
     if model_type == "baseline_lgbm":
-        return prepare_baseline_data()
+        return prepare_baseline_data(split_strategy=split_strategy)
+    if model_type == "alharbi_lgbm":
+        return prepare_alharbi_lgbm_data(split_strategy=split_strategy)
     if model_type == "ae_lgbm_ld128":
         resolved_autoencoder_output_dir = (
             autoencoder_output_dir or AUTOENCODER_ROBUST_LD128_OUTPUT_DIR
         )
         return prepare_ae_lgbm_ld128_data(
-            autoencoder_output_dir=resolved_autoencoder_output_dir
+            autoencoder_output_dir=resolved_autoencoder_output_dir,
+            split_strategy=split_strategy,
         )
     if model_type == "ae_lgbm_ld32_hybrid":
         if retain_top_v_features is None:
@@ -458,6 +539,7 @@ def prepare_data(
             autoencoder_output_dir=resolved_autoencoder_output_dir,
             retain_top_v_features=retain_top_v_features,
             baseline_importance_path=baseline_importance_path,
+            split_strategy=split_strategy,
         )
     raise ValueError(f"Unsupported model_type: {model_type}")
 
@@ -763,6 +845,7 @@ def build_run_config(
         "target_column": TARGET_COL,
         "id_column_dropped_from_features": ID_COL,
         "time_column": TIME_COL,
+        "split_strategy": prepared.split_strategy,
         "split_ratios": {
             "train": TRAIN_RATIO,
             "validation": VALID_RATIO,
@@ -918,6 +1001,18 @@ def build_optuna_comparison_table() -> pd.DataFrame:
             TUNED_OUTPUT_DIRS["baseline_lgbm"] / "run_config.json",
         ),
         (
+            "alharbi_lgbm_default",
+            False,
+            ALHARBI_STYLE_OUTPUT_DIR / "metrics_test_selected_threshold.json",
+            ALHARBI_STYLE_OUTPUT_DIR / "run_config.json",
+        ),
+        (
+            "alharbi_lgbm_tuned",
+            True,
+            TUNED_OUTPUT_DIRS["alharbi_lgbm"] / "metrics_test_selected_threshold.json",
+            TUNED_OUTPUT_DIRS["alharbi_lgbm"] / "run_config.json",
+        ),
+        (
             "ae_lgbm_ld128_default",
             False,
             AE_LGBM_LD128_OUTPUT_DIR / "metrics_test_selected_threshold.json",
@@ -1006,6 +1101,7 @@ def print_deltas(table: pd.DataFrame) -> None:
     print("======================")
     pairs = [
         ("baseline_lgbm", "baseline_lgbm_default", "baseline_lgbm_tuned"),
+        ("alharbi_lgbm", "alharbi_lgbm_default", "alharbi_lgbm_tuned"),
         ("ae_lgbm_ld128", "ae_lgbm_ld128_default", "ae_lgbm_ld128_tuned"),
     ]
     for label, default_name, tuned_name in pairs:
@@ -1098,6 +1194,7 @@ def run_tuning(args: argparse.Namespace) -> None:
         autoencoder_output_dir=args.autoencoder_output_dir,
         retain_top_v_features=args.retain_top_v_features,
         baseline_importance_path=args.baseline_importance_path,
+        split_strategy=args.split_strategy,
     )
 
     log("Creating/loading Optuna study.")
@@ -1183,7 +1280,7 @@ def run_tuning(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Optuna/TPE tuning for proposal-scope baseline_lgbm, "
+            "Optuna/TPE tuning for baseline_lgbm, alharbi_lgbm, "
             "ae_lgbm_ld128, and ae_lgbm_ld32_hybrid."
         )
     )
@@ -1191,7 +1288,10 @@ def parse_args() -> argparse.Namespace:
         "--model_type",
         required=True,
         choices=SUPPORTED_MODEL_TYPES,
-        help="Model to tune: baseline_lgbm, ae_lgbm_ld128, or ae_lgbm_ld32_hybrid.",
+        help=(
+            "Model to tune: baseline_lgbm, alharbi_lgbm, "
+            "ae_lgbm_ld128, or ae_lgbm_ld32_hybrid."
+        ),
     )
     parser.add_argument(
         "--n_trials",
@@ -1294,14 +1394,23 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Baseline feature_importance.csv for model_type=ae_lgbm_ld32_hybrid.",
     )
+    parser.add_argument(
+        "--split-strategy",
+        choices=SUPPORTED_SPLIT_STRATEGIES,
+        default=DEFAULT_SPLIT_STRATEGY,
+        help="Holdout split strategy. Default is the active thesis stratified reset.",
+    )
     args = parser.parse_args()
     if args.n_trials < 0:
         raise SystemExit("--n_trials must be zero or a positive integer.")
     if args.n_jobs == 0:
         raise SystemExit("--n_jobs must be non-zero.")
-    if args.autoencoder_output_dir is not None and args.model_type == "baseline_lgbm":
+    if args.autoencoder_output_dir is not None and args.model_type in (
+        "baseline_lgbm",
+        "alharbi_lgbm",
+    ):
         raise SystemExit(
-            "--autoencoder-output-dir is not supported for model_type=baseline_lgbm."
+            "--autoencoder-output-dir is supported only for AE model types."
         )
     if args.model_type == "ae_lgbm_ld32_hybrid":
         if args.retain_top_v_features is None:

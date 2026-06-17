@@ -19,7 +19,7 @@ pdf: "../../2. Reference/08_Dataset_IEEE-CIS/Carcillo_2018_SCARFF_Streaming_Cred
 ## Ringkasan
 
 - Imbalance + nonstationarity + feedback latency dalam sistem fraud nyata.
-- Justifikasi mengapa random stratified split kurang realistis.
+- Justifikasi limitation/future work bahwa random/stratified split kurang realistis untuk deployment temporal.
 
 ## File
 

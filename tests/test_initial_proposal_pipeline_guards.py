@@ -18,8 +18,13 @@ from build_initial_proposal_comparison import (  # noqa: E402
     INITIAL_PROPOSAL_MODEL_NAMES,
     build_initial_proposal_comparison_table,
 )
-from config import ID_COL, TARGET_COL, TIME_COL  # noqa: E402
-from splitting import chronological_split, sort_by_transaction_time  # noqa: E402
+from config import DEFAULT_SPLIT_STRATEGY, ID_COL, TARGET_COL, TIME_COL  # noqa: E402
+from splitting import (  # noqa: E402
+    chronological_split,
+    create_holdout_split,
+    sort_by_transaction_time,
+    stratified_holdout_split,
+)
 from train_ae_lgbm import (  # noqa: E402
     save_latent_split_manifest,
     validate_latent_split_manifest_alignment,
@@ -54,6 +59,26 @@ def test_chronological_split_preserves_deterministic_order() -> None:
     )
     combined_ids = pd.concat([train_df, valid_df, test_df], ignore_index=True)[ID_COL]
     assert combined_ids.tolist() == [100, 200, 300, 400, 500, 600]
+
+
+def test_default_holdout_split_is_stratified() -> None:
+    df = pd.DataFrame(
+        {
+            ID_COL: list(range(1, 21)),
+            TIME_COL: list(range(101, 121)),
+            TARGET_COL: [1, 0, 0, 0] * 5,
+            "feature_a": list(range(20)),
+        }
+    )
+    train_df, valid_df, test_df = create_holdout_split(df)
+    expected_train, expected_valid, expected_test = stratified_holdout_split(df)
+
+    assert DEFAULT_SPLIT_STRATEGY == "stratified_holdout"
+    assert train_df[ID_COL].tolist() == expected_train[ID_COL].tolist()
+    assert valid_df[ID_COL].tolist() == expected_valid[ID_COL].tolist()
+    assert test_df[ID_COL].tolist() == expected_test[ID_COL].tolist()
+    assert train_df[TARGET_COL].mean() == valid_df[TARGET_COL].mean()
+    assert valid_df[TARGET_COL].mean() == test_df[TARGET_COL].mean()
 
 
 def test_latent_manifest_alignment_passes_when_transaction_ids_match(

@@ -1,5 +1,11 @@
 # Initial Proposal Rerun Guide
 
+Status: historical chronological reproduction guide.
+
+The active code default is now `--split-strategy stratified_holdout`. To
+reproduce the 2026-06-16 P01-P04 numbers in this guide, pass
+`--split-strategy chronological` to split-aware scripts.
+
 This guide covers only the original thesis proposal experiment path. It does not cover behavioral features, causal behavioral alignment, CDV AE, feature-engineered static branches, late fusion, score ensembles, GBDT backend comparisons, or task-aware AE experiments.
 
 ## Latest Rerun Status
@@ -65,26 +71,31 @@ Legacy locations such as `outputs/baseline_lgbm/` and `outputs/ae_lgbm/` remain 
 Run from the repository root after installing `requirements.txt` and placing IEEE-CIS files under `data/raw/`.
 
 ```bash
-python src/check_data_split.py
+python src/check_data_split.py \
+  --split-strategy chronological
 
 python src/train_baseline_lgbm.py \
   --output-dir outputs/initial_proposal/baseline_lgbm_default \
-  --phase-name 2_baseline_lgbm_initial_proposal
+  --phase-name 2_baseline_lgbm_initial_proposal \
+  --split-strategy chronological
 
 python src/train_autoencoder_robust.py \
   --latent-dim 32 \
   --output-dir outputs/initial_proposal/autoencoder_robust_ld32 \
-  --phase-name 3B_robust_autoencoder_representation_learning_ld32
+  --phase-name 3B_robust_autoencoder_representation_learning_ld32 \
+  --split-strategy chronological
 
 python src/train_ae_lgbm.py \
   --autoencoder-output-dir outputs/initial_proposal/autoencoder_robust_ld32 \
   --output-dir outputs/initial_proposal/ae_lgbm_ld32_default \
-  --phase-name 4_ae_lgbm_ld32_default_initial_proposal
+  --phase-name 4_ae_lgbm_ld32_default_initial_proposal \
+  --split-strategy chronological
 
 python src/train_autoencoder_robust.py \
   --latent-dim 128 \
   --output-dir outputs/initial_proposal/autoencoder_robust_ld128 \
-  --phase-name 3B_robust_autoencoder_representation_learning_ld128
+  --phase-name 3B_robust_autoencoder_representation_learning_ld128 \
+  --split-strategy chronological
 
 python src/tune_lgbm_optuna.py \
   --model_type baseline_lgbm \
@@ -93,6 +104,7 @@ python src/tune_lgbm_optuna.py \
   --storage sqlite:///outputs/initial_proposal/optuna/baseline_lgbm_tuned/study.db \
   --study_name initial_proposal_baseline_lgbm \
   --output-dir outputs/initial_proposal/optuna/baseline_lgbm_tuned \
+  --split-strategy chronological \
   --skip-global-comparison-update
 
 python src/tune_lgbm_optuna.py \
@@ -103,6 +115,7 @@ python src/tune_lgbm_optuna.py \
   --storage sqlite:///outputs/initial_proposal/optuna/ae_lgbm_ld128_tuned/study.db \
   --study_name initial_proposal_ae_lgbm_ld128 \
   --output-dir outputs/initial_proposal/optuna/ae_lgbm_ld128_tuned \
+  --split-strategy chronological \
   --skip-global-comparison-update
 
 python src/build_initial_proposal_comparison.py \
@@ -145,7 +158,10 @@ python src/build_initial_proposal_comparison.py
 
 ## Latent TransactionID Alignment
 
-Autoencoder latent vectors are saved as NumPy arrays without embedded row keys. Row `i` in `latent_train.npy` must correspond to row `i` in the chronological train split.
+Autoencoder latent vectors are saved as NumPy arrays without embedded row keys.
+For this historical guide, row `i` in `latent_train.npy` must correspond to row
+`i` in the chronological train split created with `--split-strategy
+chronological`.
 
 `train_autoencoder_robust.py` writes `latent_split_manifest.csv` beside the latent arrays. `train_ae_lgbm.py` and the `ae_lgbm_ld128` path in `tune_lgbm_optuna.py` load that manifest and fail fast when `TransactionID` order does not match the current split.
 
