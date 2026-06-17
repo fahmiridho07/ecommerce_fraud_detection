@@ -86,6 +86,7 @@ def prepare_mask_aware_v_features(
     valid_df: pd.DataFrame,
     test_df: pd.DataFrame,
     v_columns: list[str],
+    training_subset: str,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
@@ -99,44 +100,49 @@ def prepare_mask_aware_v_features(
     StandardScaler,
     SimpleImputer,
 ]:
-    """Fit normal-train median/scaler and append observed masks as AE inputs."""
+    """Fit train-only median/scaler and append observed masks as AE inputs."""
     if not v_columns:
         raise ValueError("No V-features were detected. Check V_FEATURE_PATTERN.")
 
     normal_train_df = train_df.loc[train_df[TARGET_COL] == 0]
     if normal_train_df.empty:
         raise ValueError("Normal-only train subset is empty.")
+    if training_subset not in {"normal", "all"}:
+        raise ValueError(f"Unsupported training_subset: {training_subset}")
 
     X_train_raw = train_df.loc[:, v_columns].astype("float32")
     X_valid_raw = valid_df.loc[:, v_columns].astype("float32")
     X_test_raw = test_df.loc[:, v_columns].astype("float32")
-    X_normal_raw = normal_train_df.loc[:, v_columns].astype("float32")
+    if training_subset == "normal":
+        X_fit_raw = normal_train_df.loc[:, v_columns].astype("float32")
+    else:
+        X_fit_raw = X_train_raw
 
     observed_train = (~X_train_raw.isna()).to_numpy(dtype="float32")
     observed_valid = (~X_valid_raw.isna()).to_numpy(dtype="float32")
     observed_test = (~X_test_raw.isna()).to_numpy(dtype="float32")
-    observed_normal = (~X_normal_raw.isna()).to_numpy(dtype="float32")
+    observed_fit = (~X_fit_raw.isna()).to_numpy(dtype="float32")
 
     imputer = build_median_imputer()
-    X_normal_imputed = fit_transform_v_imputer(imputer, X_normal_raw)
+    X_fit_imputed = fit_transform_v_imputer(imputer, X_fit_raw)
     X_train_imputed = imputer.transform(X_train_raw)
     X_valid_imputed = imputer.transform(X_valid_raw)
     X_test_imputed = imputer.transform(X_test_raw)
 
     scaler = StandardScaler()
-    X_normal_scaled = scaler.fit_transform(X_normal_imputed).astype("float32")
+    X_fit_scaled = scaler.fit_transform(X_fit_imputed).astype("float32")
     X_train_scaled = scaler.transform(X_train_imputed).astype("float32")
     X_valid_scaled = scaler.transform(X_valid_imputed).astype("float32")
     X_test_scaled = scaler.transform(X_test_imputed).astype("float32")
 
     if AE_USE_SCALED_CLIPPING:
-        X_normal_scaled = np.clip(X_normal_scaled, AE_CLIP_MIN, AE_CLIP_MAX)
+        X_fit_scaled = np.clip(X_fit_scaled, AE_CLIP_MIN, AE_CLIP_MAX)
         X_train_scaled = np.clip(X_train_scaled, AE_CLIP_MIN, AE_CLIP_MAX)
         X_valid_scaled = np.clip(X_valid_scaled, AE_CLIP_MIN, AE_CLIP_MAX)
         X_test_scaled = np.clip(X_test_scaled, AE_CLIP_MIN, AE_CLIP_MAX)
 
-    X_normal_input = np.concatenate(
-        [X_normal_scaled, observed_normal],
+    X_fit_input = np.concatenate(
+        [X_fit_scaled, observed_fit],
         axis=1,
     ).astype("float32")
     X_train_input = np.concatenate([X_train_scaled, observed_train], axis=1).astype("float32")
@@ -144,15 +150,15 @@ def prepare_mask_aware_v_features(
     X_test_input = np.concatenate([X_test_scaled, observed_test], axis=1).astype("float32")
 
     return (
-        X_normal_input,
+        X_fit_input,
         X_train_input,
         X_valid_input,
         X_test_input,
-        X_normal_scaled,
+        X_fit_scaled,
         X_train_scaled,
         X_valid_scaled,
         X_test_scaled,
-        observed_normal,
+        observed_fit,
         observed_train,
         observed_valid,
         observed_test,
@@ -229,15 +235,16 @@ def grouped_reconstruction_features(
     observed_mask: np.ndarray,
     group_indices: dict[str, list[int]],
     batch_size: int,
+    feature_prefix: str = "normal_masked_ae",
 ) -> pd.DataFrame:
     reconstructed = model.predict(X_input, batch_size=batch_size, verbose=0)
     squared_error = np.square(X_target - reconstructed) * observed_mask
     features: dict[str, np.ndarray] = {}
     global_denominator = np.maximum(observed_mask.sum(axis=1), 1.0)
     global_mse = squared_error.sum(axis=1) / global_denominator
-    features["normal_masked_ae_mse"] = global_mse.astype("float32")
-    features["normal_masked_ae_log1p_mse"] = np.log1p(global_mse).astype("float32")
-    features["normal_masked_ae_observed_v_rate"] = observed_mask.mean(axis=1).astype("float32")
+    features[f"{feature_prefix}_mse"] = global_mse.astype("float32")
+    features[f"{feature_prefix}_log1p_mse"] = np.log1p(global_mse).astype("float32")
+    features[f"{feature_prefix}_observed_v_rate"] = observed_mask.mean(axis=1).astype("float32")
 
     for group_name, indices in group_indices.items():
         if not indices:
@@ -247,11 +254,11 @@ def grouped_reconstruction_features(
         denominator = np.maximum(group_mask.sum(axis=1), 1.0)
         group_mse = group_error.sum(axis=1) / denominator
         observed_rate = group_mask.mean(axis=1)
-        features[f"normal_masked_ae_{group_name}_mse"] = group_mse.astype("float32")
-        features[f"normal_masked_ae_{group_name}_log1p_mse"] = np.log1p(
+        features[f"{feature_prefix}_{group_name}_mse"] = group_mse.astype("float32")
+        features[f"{feature_prefix}_{group_name}_log1p_mse"] = np.log1p(
             group_mse
         ).astype("float32")
-        features[f"normal_masked_ae_{group_name}_observed_rate"] = observed_rate.astype(
+        features[f"{feature_prefix}_{group_name}_observed_rate"] = observed_rate.astype(
             "float32"
         )
     return pd.DataFrame(features)
@@ -281,7 +288,10 @@ def main(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     phase_name: str = "normal_only_mask_aware_autoencoder_ld128",
     input_noise_std: float = DEFAULT_INPUT_NOISE_STD,
+    training_subset: str = "normal",
 ) -> dict[str, object]:
+    if training_subset not in {"normal", "all"}:
+        raise ValueError(f"Unsupported training_subset: {training_subset}")
     set_seed(RANDOM_SEED)
     tf.keras.utils.set_random_seed(RANDOM_SEED)
     output_dir = ensure_dir(output_dir)
@@ -296,25 +306,34 @@ def main(
     subset_counts = normal_subset_counts(train_df, valid_df, test_df)
     group_indices = group_column_indices(v_columns)
 
-    log("Preparing normal-train-fitted values plus observed-mask inputs.")
+    feature_prefix = (
+        "normal_masked_ae" if training_subset == "normal" else "all_masked_ae"
+    )
+    log(f"Preparing {training_subset}-train-fitted values plus observed-mask inputs.")
     (
-        X_normal_input,
+        X_fit_input,
         X_train_input,
         X_valid_input,
         X_test_input,
-        X_normal_target,
+        X_fit_target,
         X_train_target,
         X_valid_target,
         X_test_target,
-        observed_normal,
+        observed_fit,
         observed_train,
         observed_valid,
         observed_test,
         scaler,
         imputer,
-    ) = prepare_mask_aware_v_features(train_df, valid_df, test_df, v_columns)
+    ) = prepare_mask_aware_v_features(
+        train_df,
+        valid_df,
+        test_df,
+        v_columns,
+        training_subset=training_subset,
+    )
 
-    log("Building normal-only mask-aware Autoencoder.")
+    log(f"Building {training_subset}-train mask-aware Autoencoder.")
     autoencoder, encoder = build_mask_aware_autoencoder(
         value_dim=value_dim,
         latent_dim=latent_dim,
@@ -322,21 +341,25 @@ def main(
         input_noise_std=input_noise_std,
     )
 
-    y_normal_masked = build_masked_targets(X_normal_target, observed_normal)
-    normal_valid_mask = valid_df[TARGET_COL].to_numpy(dtype=int) == 0
-    if not normal_valid_mask.any():
-        raise ValueError("Normal-only validation subset is empty.")
-    X_valid_normal_input = X_valid_input[normal_valid_mask]
-    y_valid_normal_masked = build_masked_targets(
-        X_valid_target[normal_valid_mask],
-        observed_valid[normal_valid_mask],
-    )
+    y_fit_masked = build_masked_targets(X_fit_target, observed_fit)
+    if training_subset == "normal":
+        valid_fit_mask = valid_df[TARGET_COL].to_numpy(dtype=int) == 0
+        if not valid_fit_mask.any():
+            raise ValueError("Normal-only validation subset is empty.")
+        X_valid_fit_input = X_valid_input[valid_fit_mask]
+        y_valid_fit_masked = build_masked_targets(
+            X_valid_target[valid_fit_mask],
+            observed_valid[valid_fit_mask],
+        )
+    else:
+        X_valid_fit_input = X_valid_input
+        y_valid_fit_masked = build_masked_targets(X_valid_target, observed_valid)
 
-    log("Training on normal train rows; early stopping on normal validation rows.")
+    log(f"Training on {training_subset} train rows; early stopping on matching validation rows.")
     history = autoencoder.fit(
-        X_normal_input,
-        y_normal_masked,
-        validation_data=(X_valid_normal_input, y_valid_normal_masked),
+        X_fit_input,
+        y_fit_masked,
+        validation_data=(X_valid_fit_input, y_valid_fit_masked),
         epochs=AE_MAX_EPOCHS,
         batch_size=AE_BATCH_SIZE,
         shuffle=True,
@@ -370,7 +393,7 @@ def main(
     np.save(output_dir / "latent_valid.npy", latent_valid)
     np.save(output_dir / "latent_test.npy", latent_test)
     latent_feature_names = [
-        f"normal_masked_ae_latent_{index:03d}" for index in range(1, latent_dim + 1)
+        f"{feature_prefix}_latent_{index:03d}" for index in range(1, latent_dim + 1)
     ]
     save_json(latent_feature_names, output_dir / "latent_feature_names.json")
     save_latent_split_manifest(train_df, valid_df, test_df, output_dir)
@@ -409,6 +432,7 @@ def main(
             observed_train,
             group_indices,
             AE_BATCH_SIZE,
+            feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_train.csv",
     )
@@ -420,6 +444,7 @@ def main(
             observed_valid,
             group_indices,
             AE_BATCH_SIZE,
+            feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_valid.csv",
     )
@@ -431,6 +456,7 @@ def main(
             observed_test,
             group_indices,
             AE_BATCH_SIZE,
+            feature_prefix=feature_prefix,
         ),
         output_dir / "reconstruction_features_test.csv",
     )
@@ -476,12 +502,15 @@ def main(
         "v_feature_count": value_dim,
         "v_columns": v_columns,
         "target_usage": (
-            "isFraud is used only to select normal train rows for AE training "
-            "and normal validation rows for AE early stopping."
+            "isFraud is used only to select normal train/validation rows."
+            if training_subset == "normal"
+            else "isFraud is not used for Autoencoder fitting or early stopping."
         ),
         "literature_alignment": {
             "anomaly_detection": (
                 "Normal-only training with reconstruction error as anomaly signal."
+                if training_subset == "normal"
+                else "Mask-aware denoising representation learning; reconstruction error is tested as an anomaly signal."
             ),
             "mask_aware_tabular": (
                 "Observed-cell mask is appended to the AE input and used in the loss."
@@ -493,9 +522,15 @@ def main(
         "preprocessing": {
             "missing_value_strategy": (
                 "SimpleImputer(strategy='median') fitted on normal train V-features only."
+                if training_subset == "normal"
+                else "SimpleImputer(strategy='median') fitted on train V-features only."
             ),
             "imputer_artifact": "v_imputer.pkl",
-            "scaler": "StandardScaler fitted on normal train median-imputed V-features only.",
+            "scaler": (
+                "StandardScaler fitted on normal train median-imputed V-features only."
+                if training_subset == "normal"
+                else "StandardScaler fitted on train median-imputed V-features only."
+            ),
             "scaled_clipping_enabled": AE_USE_SCALED_CLIPPING,
             "clip_min": AE_CLIP_MIN,
             "clip_max": AE_CLIP_MAX,
@@ -522,10 +557,12 @@ def main(
             "best_epoch": best_epoch,
             "best_validation_loss": best_validation_loss,
             "random_seed": RANDOM_SEED,
+            "training_subset": training_subset,
         },
         "reconstruction_features": {
-            "global": ["normal_masked_ae_mse", "normal_masked_ae_log1p_mse"],
+            "global": [f"{feature_prefix}_mse", f"{feature_prefix}_log1p_mse"],
             "observed_rate": True,
+            "feature_prefix": feature_prefix,
             "groups": [
                 {
                     "name": name,
@@ -540,11 +577,12 @@ def main(
     save_json(run_config, output_dir / "run_config.json")
 
     print()
-    print("Normal-Only Mask-Aware Autoencoder Summary")
-    print("==========================================")
+    print("Mask-Aware Autoencoder Summary")
+    print("==============================")
     print(f"V features          : {value_dim}")
     print(f"Model input dim     : {value_dim * 2}")
     print(f"Latent dimension    : {latent_dim}")
+    print(f"Training subset     : {training_subset}")
     print(f"Normal train rows   : {subset_counts['train_normal_rows']:,}")
     print(f"Best epoch          : {best_epoch}")
     print(f"Best validation loss: {best_validation_loss:.6f}")
@@ -573,6 +611,12 @@ def parse_args() -> argparse.Namespace:
         default="normal_only_mask_aware_autoencoder_ld128",
     )
     parser.add_argument("--input-noise-std", type=float, default=DEFAULT_INPUT_NOISE_STD)
+    parser.add_argument(
+        "--training-subset",
+        choices=("normal", "all"),
+        default="normal",
+        help="Rows used to fit the AE: normal train rows or the full train split.",
+    )
     return parser.parse_args()
 
 
@@ -583,4 +627,5 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         phase_name=args.phase_name,
         input_noise_std=args.input_noise_std,
+        training_subset=args.training_subset,
     )

@@ -217,6 +217,40 @@ Results:
 
 Interpretation: enhanced preprocessing improves both supervised baseline and AE-05. The best PR-AUC is now the enhanced baseline, while enhanced AE-05 gives the best thresholded F1/MCC. This shifts the next research question from "can AE beat the old P02?" to "can AE beat a preprocessing-strengthened baseline under matched tuning?"
 
+## Preprocessing Ablation: Frequency, Missingness, Time, and Amount Features
+
+Follow-up diagnosis of IEEE-CIS papers showed that the most transferable practices for this thesis are not SMOTE or stacking, but train-only categorical frequency encoding, explicit missingness summaries, and temporal/amount feature engineering. This is aligned with Moradi et al. (2025), where temporal, aggregation, interaction, and amount features drive a large AUC-PR ablation gain, and Alharbi et al. (2026), where IEEE-CIS categorical fields are frequency encoded with explicit missing handling.
+
+Implemented without changing P01-P04:
+
+- train-only count/frequency encoding for selected card, address, email, and normalized identity/device categories;
+- compact missingness summaries for `V*`, `D*`, `M*`, `id_*`, email, and distance groups;
+- `TransactionDT` day/week/day-of-week/hour-of-day features;
+- `TransactionAmt` log and cents features;
+- no SMOTE, no target encoding, no full-data fitting.
+
+Comparison table: `outputs/initial_proposal/preprocessing_ablation/preprocessing_ablation_extended_comparison.csv`.
+
+Bootstrap table: `outputs/initial_proposal/preprocessing_ablation/bootstrap_frequency_missingness_time_amount_vs_enhanced/paired_bootstrap_pr_auc_delta.csv`.
+
+| Model | Val AP | Test AP | ROC-AUC | F1 | MCC | Features |
+|-------|-------:|--------:|--------:|---:|----:|---------:|
+| P02 tuned baseline | 0.631767 | 0.504900 | 0.883431 | 0.493865 | 0.494270 | 432 |
+| Enhanced baseline | 0.643247 | 0.516590 | 0.895311 | 0.503787 | 0.504735 | 438 |
+| + frequency encoding | 0.648957 | 0.517788 | 0.894646 | 0.508579 | 0.504456 | 468 |
+| + frequency + missingness | **0.649575** | 0.520296 | 0.895278 | 0.512720 | 0.513060 | 482 |
+| **+ frequency + missingness + time/amount** | 0.647355 | **0.524197** | **0.899850** | 0.513185 | **0.523469** | 488 |
+| same features + AE reconstruction error | 0.652940 | 0.521442 | 0.897050 | 0.508946 | 0.512006 | 490 |
+| same features + AE-05 hybrid | 0.647282 | 0.514375 | 0.895082 | **0.520613** | 0.519425 | 520 |
+
+Paired bootstrap vs enhanced baseline:
+
+| Comparison | Delta AP | 95% CI | One-sided p(delta <= 0) |
+|------------|---------:|--------|------------------------:|
+| frequency + missingness + time/amount - enhanced baseline | +0.007606 | [+0.004191, +0.010820] | 0.0000 |
+
+Interpretation: the current best fixed-parameter result is a preprocessing-strengthened LightGBM baseline, not an AE-augmented variant. AE reconstruction error remains useful as a diagnostic/anomaly signal, but it did not improve PR-AUC once frequency, compact missingness, temporal, and amount features were added. This should be treated as a post-diagnostic preprocessing extension, while P01-P04 remain the canonical historical proposal block.
+
 ## Reconstruction-Error Augmentation (Post-Fix, Not P01-P04)
 
 Archive review showed that AE reconstruction error was the strongest historical AE integration path. This post-fix rerun keeps all original baseline features and appends only two LD128 Autoencoder anomaly features from `outputs/initial_proposal/autoencoder_robust_ld128/`:
@@ -319,6 +353,121 @@ The refined AE variants did not improve on robust LD128 global reconstruction-er
 | Robust LD128 | Test | 0.063623 | 0.043953 | 0.69x |
 
 Interpretation: normal-only AE is methodologically credible, but under this chronological IEEE-CIS split it is sensitive to temporal drift. The most stable thesis-facing AE contribution remains robust LD128 global reconstruction-error augmentation, not normal-only or grouped-error expansion.
+
+## Structured AE Continuation: Mask-Aware Denoising LD32 + Fixed Score Ensemble
+
+Follow-up request: continue experiments until AE gives a significant impact over the strongest current baseline, without tuning or thesis drafting.
+
+Baseline to beat:
+
+- `outputs/initial_proposal/preprocessing_ablation/baseline_frequency_missingness_time_amount_fixed_p02/`
+- Test AP: **0.524197**
+
+Literature anchor:
+
+- Jiang et al. (2023): AE reconstruction/latent distances can be treated as anomaly signals.
+- Vincent et al. (2010): denoising AE supports robust representations from corrupted inputs.
+- Alharbi et al. (2026): IEEE-CIS preprocessing benefits from explicit missing handling and compact AE latent spaces.
+- Moradi et al. (2025): ensemble-style integration is a credible direction on IEEE-CIS, but here the ensemble weight is fixed rather than tuned.
+
+AE representation change:
+
+- Added `--training-subset all` to `src/train_autoencoder_normal_masked.py`.
+- Trained all-train mask-aware denoising AE with LD32:
+
+```bash
+python src/train_autoencoder_normal_masked.py \
+  --latent-dim 32 \
+  --training-subset all \
+  --output-dir outputs/initial_proposal/all_masked_autoencoder_ld32 \
+  --phase-name all_train_mask_aware_denoising_autoencoder_ld32 \
+  --input-noise-std 0.02
+```
+
+Integration candidates were run with fixed P02 LightGBM parameters and the same chronological split:
+
+| Model | Val AP | Test AP | Test ROC-AUC | Test F1 | Test MCC |
+|-------|--------|---------|--------------|---------|----------|
+| Baseline best | 0.647355 | 0.524197 | 0.899850 | 0.513185 | **0.523469** |
+| All-mask LD32 latent add-on | 0.643455 | 0.523783 | 0.898913 | 0.507131 | 0.515228 |
+| All-mask LD32 raw reconstruction | 0.647206 | 0.520961 | 0.896024 | 0.514393 | 0.507936 |
+| All-mask LD32 grouped reconstruction | 0.642936 | 0.518163 | 0.898368 | 0.504402 | 0.509154 |
+| All-mask LD32 latent + reconstruction | 0.638864 | 0.519162 | 0.898755 | 0.506379 | 0.507979 |
+| All-mask LD16 latent add-on | 0.643893 | 0.518005 | 0.898528 | 0.504414 | 0.513662 |
+
+Because the LD32 latent add-on was close to the baseline but did not exceed it, a fixed, non-tuned equal-weight score integration was tested:
+
+- Candidate: `0.5 * baseline_score + 0.5 * all_masked_ld32_latent_score`
+- Probe output: `outputs/initial_proposal/preprocessing_ablation/score_ensemble_baseline_all_masked_ld32_fixed_average/`
+
+Canonical script:
+
+```bash
+python src/train_score_ensemble.py \
+  --alpha 0.5 \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/score_ensemble_baseline_all_masked_ld32_fixed_050_canonical \
+  --bootstrap-samples 2000
+```
+
+Result:
+
+| Model | Val AP | Test AP | Test ROC-AUC | Test F1 | Test MCC |
+|-------|--------|---------|--------------|---------|----------|
+| Fixed score average: baseline + all-mask LD32 latent | **0.651144** | **0.529114** | **0.902288** | **0.515423** | 0.520584 |
+
+Paired bootstrap against baseline best:
+
+- Output: `outputs/initial_proposal/preprocessing_ablation/bootstrap_score_ensemble_baseline_all_masked_ld32_vs_baseline/`
+- Delta AP: **+0.004917**
+- 95% CI: **[+0.003177, +0.006720]**
+- `p(delta <= 0)`: **0.0000** over 2,000 bootstrap samples.
+
+Validation-only 10-trial alpha tuning was then run as a robustness check, without refitting either LightGBM component:
+
+```bash
+python src/train_score_ensemble.py \
+  --tune-trials 10 \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/score_ensemble_baseline_all_masked_ld32_alpha_tuned_10trials \
+  --bootstrap-samples 2000
+```
+
+| Model | Alpha | Val AP | Test AP | Test ROC-AUC | Test F1 | Test MCC | Bootstrap delta AP vs baseline |
+|-------|-------|--------|---------|--------------|---------|----------|-------------------------------|
+| Fixed score average | 0.500000 | 0.651144 | **0.529114** | 0.902288 | **0.515423** | 0.520584 | **+0.004917** |
+| 10-trial tuned alpha | 0.374540 | **0.651435** | 0.528975 | **0.902388** | 0.514045 | **0.521661** | +0.004778 |
+
+Tuned-alpha bootstrap:
+
+- Output: `outputs/initial_proposal/preprocessing_ablation/score_ensemble_baseline_all_masked_ld32_alpha_tuned_10trials/`
+- 95% CI: **[+0.003407, +0.006165]**
+- `p(delta <= 0)`: **0.0000** over 2,000 bootstrap samples.
+
+Manual alpha robustness check:
+
+| Alpha | Val AP | Test AP | Test ROC-AUC | Test F1 | Test MCC | Delta AP vs baseline | 95% CI | `p(delta <= 0)` |
+|-------|--------|---------|--------------|---------|----------|----------------------|--------|-----------------|
+| 0.25 | 0.651007 | 0.528179 | 0.902202 | **0.515837** | **0.523538** | +0.003982 | [+0.003025, +0.004957] | 0.0000 |
+| **0.50** | 0.651144 | **0.529114** | 0.902288 | 0.515423 | 0.520584 | **+0.004917** | [+0.003177, +0.006720] | 0.0000 |
+| 0.75 | 0.648753 | 0.527575 | 0.901333 | 0.511346 | 0.517891 | +0.003378 | [+0.000799, +0.005911] | 0.0065 |
+
+Complementarity diagnostics for the fixed 0.50 ensemble:
+
+- Output: `outputs/initial_proposal/preprocessing_ablation/score_ensemble_baseline_all_masked_ld32_diagnostics/`
+- Baseline vs AE score correlation remains high but not identical:
+  - Pearson: **0.9699**
+  - Spearman: **0.8938**
+- Test AP by component:
+  - baseline: **0.524197**
+  - AE latent component: **0.523783**
+  - ensemble: **0.529114**
+- Fraud-rank movement among 4,064 test fraud rows:
+  - improved rank: **2,079**
+  - worsened rank: **1,970**
+  - median rank improvement: **+6**
+  - mean rank improvement: **+278**
+- At top-10,000 ranked rows, ensemble captures **2,720** frauds vs baseline **2,706**.
+
+Interpretation: AE becomes beneficial when used as a complementary score-level signal rather than as raw V-feature replacement or direct reconstruction-error augmentation. This is the first post-preprocessing AE continuation result that significantly improves the primary PR-AUC over the strongest fixed-parameter baseline. It should remain marked as an experiment result until the thesis methodology decides whether fixed score-level integration is within the final scope.
 
 ## Diagnostics
 

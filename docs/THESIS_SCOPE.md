@@ -10,8 +10,9 @@ The thesis studies fraud detection on the IEEE-CIS Fraud Detection dataset using
 - Autoencoder representation learning on anonymized numerical `V*` features.
 - AE-LightGBM, where original `V*` values are replaced by learned latent features while `V*` missingness indicators (`v_missing_*`) are preserved for the downstream classifier.
 - Bayesian hyperparameter optimization with Optuna.
+- Post-diagnostic score-level integration, where a preprocessing-strengthened LightGBM score is combined with an AE latent-LightGBM score.
 
-The active comparison is P01–P04 only:
+The historical proposal comparison remains P01-P04:
 
 | ID | Model |
 |----|-------|
@@ -20,14 +21,21 @@ The active comparison is P01–P04 only:
 | P03 / AE-01 | AE-LightGBM default, LD32 latent replacement plus `V*` missing indicators |
 | P04 / AE-02 | AE-LightGBM Optuna tuned, LD128 latent replacement plus `V*` missing indicators |
 
-Canonical experiment artifacts: `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`.
+Canonical historical proposal artifacts: `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`.
+
+The current post-diagnostic candidate comparison is documented in:
+
+- `docs/FINAL_CANDIDATE_VALIDATION.md`
+- `docs/BAB3_METHOD_ADJUSTMENT.md`
+- `docs/DOCX_UPDATE_NOTES.md`
+- `outputs/initial_proposal/preprocessing_ablation/final_candidate_comparison.csv`
 
 ## Out Of Scope For Current Thesis Claims
 
 The following branches are parked in `archive/` and must not be used as active thesis claims without a new written decision gate:
 
 - Feature-engineered static FE branches, UID features, velocity features, and FE+AE combinations.
-- Score ensembles and three-model ensembles.
+- Historical broad score ensembles and three-model ensembles. The fixed two-component score ensemble documented in `docs/FINAL_CANDIDATE_VALIDATION.md` is the current post-diagnostic candidate, not part of the archived broad ensemble family.
 - Behavioral, causal behavioral, CDV, and late-fusion branches.
 - GBDT backend shootouts with XGBoost and CatBoost.
 - Selected-numerical AE, task-aware AE, Ding-style reconstruction, and other AE appendix branches.
@@ -52,6 +60,13 @@ After rerunning P01–P04 with the missingness-preserving AE pipeline under `out
 Post-fix test PR-AUC: P02 **0.5049** > P01 0.4858 > P04 0.4845 > P03 0.4802.
 
 ## Narrative Governance
+
+**Fixed score ensemble met the strongest current decision gate (2026-06-17):** test PR-AUC **0.529114** > preprocessing-strengthened baseline **0.524197**, with paired-bootstrap delta **+0.004917** and 95% CI **[+0.003177, +0.006720]**.
+
+- **Historical proposal block:** P01-P04 remain in `initial_proposal_comparison.csv`.
+- **Intermediate candidate:** AE-05 remains traceable as the first AE branch to beat P02.
+- **Current thesis candidate:** fixed 0.50 score-level ensemble documented in `docs/FINAL_CANDIDATE_VALIDATION.md`.
+- The thesis claim should be framed as AE providing a complementary score signal, not as AE replacing LightGBM or raw tabular features.
 
 **AE-05 met the decision gate (2026-06-16):** test PR-AUC **0.5098** > P02 **0.5049**, bootstrap 95% CI excludes zero.
 

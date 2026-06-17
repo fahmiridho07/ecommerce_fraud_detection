@@ -166,3 +166,75 @@ Interpretation:
 - Enhanced baseline has the best PR-AUC/ranking quality.
 - Enhanced AE-05 has the best thresholded F1 and MCC, meaning the AE reconstruction signal still helps classification behavior after threshold selection.
 - Because the enhanced baseline now exceeds enhanced AE-05 on PR-AUC, the next fair step is either tune both enhanced variants under the same Optuna budget or refine AE-specific preprocessing while keeping enhanced categorical preprocessing fixed.
+
+## Executed Ablation: Literature-Aligned Frequency, Missingness, Time, and Amount Features
+
+After reviewing IEEE-CIS-specific studies, the next preprocessing ablation followed the feature-engineering direction most consistently supported by Moradi et al. (2025) and Alharbi et al. (2026):
+
+- train-only frequency/count encoding for selected card, address, email, and normalized identity/device categorical fields;
+- compact missingness summaries by `V*`, `D*`, `M*`, `id_*`, email, and distance families;
+- simple `TransactionDT` calendar-like features: day, week, day-of-week, and hour-of-day;
+- simple `TransactionAmt` transforms: `log1p` and cents component.
+
+These changes remain separate from the canonical P01-P04 pipeline and preserve the existing guardrails: chronological split, train-only fitted mappings, no SMOTE, no target encoding, and numeric `NaN` values preserved for LightGBM.
+
+Commands:
+
+```bash
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline \
+  --feature-set frequency \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_frequency_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline \
+  --feature-set frequency_missingness \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_frequency_missingness_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline \
+  --feature-set frequency_missingness_time_amount \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_frequency_missingness_time_amount_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type baseline_recon \
+  --feature-set frequency_missingness_time_amount \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/baseline_recon_frequency_missingness_time_amount_fixed_p02
+
+python src/train_enhanced_preprocessing_lgbm.py \
+  --model-type ae05 \
+  --feature-set frequency_missingness_time_amount \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/ae05_frequency_missingness_time_amount_fixed_ae05
+
+python src/compare_enhanced_preprocessing_bootstrap.py \
+  --candidate-dir outputs/initial_proposal/preprocessing_ablation/baseline_frequency_missingness_time_amount_fixed_p02 \
+  --reference-dir outputs/initial_proposal/preprocessing_ablation/baseline_enhanced_fixed_p02 \
+  --output-dir outputs/initial_proposal/preprocessing_ablation/bootstrap_frequency_missingness_time_amount_vs_enhanced
+```
+
+Comparison output: `outputs/initial_proposal/preprocessing_ablation/preprocessing_ablation_extended_comparison.csv`.
+
+Results:
+
+| Model | Val AP | Test AP | ROC-AUC | F1 | MCC | Features |
+|-------|-------:|--------:|--------:|---:|----:|---------:|
+| P02 tuned baseline | 0.631767 | 0.504900 | 0.883431 | 0.493865 | 0.494270 | 432 |
+| Enhanced baseline | 0.643247 | 0.516590 | 0.895311 | 0.503787 | 0.504735 | 438 |
+| + frequency encoding | 0.648957 | 0.517788 | 0.894646 | 0.508579 | 0.504456 | 468 |
+| + frequency + missingness | **0.649575** | 0.520296 | 0.895278 | 0.512720 | 0.513060 | 482 |
+| + frequency + missingness + time/amount | 0.647355 | **0.524197** | **0.899850** | 0.513185 | **0.523469** | 488 |
+| same features + AE reconstruction error | 0.652940 | 0.521442 | 0.897050 | 0.508946 | 0.512006 | 490 |
+| same features + AE-05 hybrid | 0.647282 | 0.514375 | 0.895082 | **0.520613** | 0.519425 | 520 |
+
+Paired bootstrap against the enhanced baseline on the same chronological test rows:
+
+| Comparison | Delta AP | 95% CI | One-sided p(delta <= 0) |
+|------------|---------:|--------|------------------------:|
+| frequency + missingness + time/amount - enhanced baseline | +0.007606 | [+0.004191, +0.010820] | 0.0000 |
+
+Interpretation:
+
+- The strongest fixed-parameter preprocessing candidate is now the LightGBM baseline with frequency encoding, compact missingness summaries, and time/amount features.
+- The gain over enhanced identity/device preprocessing is positive under paired bootstrap, so this result is strong enough to document as the current best preprocessing extension.
+- AE reconstruction error remains high-gain in feature importance, but adding it to the strongest preprocessing baseline reduced test AP from 0.524197 to 0.521442. AE-05 also stayed below the strongest baseline on PR-AUC.
+- The current evidence therefore supports a thesis-facing preprocessing conclusion: for IEEE-CIS under this chronological split, literature-aligned tabular preprocessing improves ranking quality more reliably than additional AE integration before tuning.

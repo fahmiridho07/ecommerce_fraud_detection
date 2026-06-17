@@ -8,7 +8,7 @@ This directory is now intentionally narrow. It contains only the active proposal
 - `data_loader.py` - IEEE-CIS train data loading.
 - `splitting.py` - chronological split helpers.
 - `preprocessing.py` - feature/target preparation and categorical preprocessing.
-- `enhanced_preprocessing.py` - isolated preprocessing ablation helpers for identity/device normalization and rare-category bucketing.
+- `enhanced_preprocessing.py` - isolated preprocessing ablation helpers for identity/device normalization, rare-category bucketing, train-only frequency encoding, compact missingness summaries, and time/amount features.
 - `evaluation.py` - AP, ROC-AUC, threshold, and confusion-matrix metrics.
 - `utils.py` - JSON, logging, seed, and filesystem helpers.
 
@@ -25,7 +25,8 @@ This directory is now intentionally narrow. It contains only the active proposal
 - `build_extended_proposal_comparison.py` - builds P01-P04 plus AE-05 extended comparison.
 - `generate_initial_proposal_diagnostics.py` - in-depth diagnostics from saved P01-P04 artifacts (missingness signal, V gain share, AE drift).
 - `generate_preprocessing_diagnostics.py` - preprocessing-only diagnostics for split composition, missingness drift, categorical unseen rates, and numeric distribution shift.
-- `train_enhanced_preprocessing_lgbm.py` - runs enhanced preprocessing ablations for the tuned baseline and AE-05 candidate.
+- `train_enhanced_preprocessing_lgbm.py` - runs enhanced preprocessing ablations for the tuned baseline, baseline plus reconstruction error, and AE-05 candidate.
+- `compare_enhanced_preprocessing_bootstrap.py` - paired bootstrap comparison for enhanced-preprocessing baseline outputs.
 - `build_representation_ablation_comparison.py` - compares P01, P03, and hybrid top-V AE runs.
 - `run_top_v_retention_sweep.py` - sweeps top-K retained `V*` hybrid models.
 - `build_significance_comparison.py` - canonical P01-P04 vs hybrid significance table.
@@ -37,8 +38,10 @@ This directory is now intentionally narrow. It contains only the active proposal
 - `train_ae_reconstruction_feature_lgbm.py` - LightGBM augmentation using original features plus grouped AE reconstruction features.
 - `tune_ae_hybrid_reconstruction_lgbm.py` - AE-05 candidate: top-V hybrid LD32 latent features plus global reconstruction-error anomaly features.
 - `compare_ae_hybrid_recon_bootstrap.py` - paired bootstrap comparison of AE-05 against the tuned baseline.
-- `enhanced_preprocessing.py` - train-only rare bucketing and drift-aware categorical normalization helpers.
-- `train_enhanced_preprocessing_lgbm.py` - preprocessing ablation for tuned baseline or AE-05 (separate from canonical pipeline).
+- `train_score_ensemble.py` - fixed or validation-tuned score-level ensemble combining the preprocessing-strengthened LightGBM score and AE latent-LightGBM score.
+- `enhanced_preprocessing.py` - train-only rare bucketing, drift-aware categorical normalization, frequency encoding, missingness, and time/amount helpers.
+- `train_enhanced_preprocessing_lgbm.py` - preprocessing ablation for tuned baseline, baseline reconstruction-error augmentation, or AE-05 (separate from canonical pipeline).
+- `compare_enhanced_preprocessing_bootstrap.py` - significance check for preprocessing ablation deltas.
 
 Canonical thesis artifacts (post-fix rerun): `outputs/initial_proposal/final_comparison/initial_proposal_comparison.csv`. Extended table: `extended_proposal_comparison.csv`. Script defaults still write to legacy `outputs/baseline_lgbm/` and `outputs/ae_lgbm/`; use directory overrides from `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md` for isolated reruns.
 
