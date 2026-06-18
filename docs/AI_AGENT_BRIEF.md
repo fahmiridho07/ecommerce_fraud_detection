@@ -122,6 +122,8 @@ Use these first:
 - LightGBM classifier: `docs/literature/cards/LightGBM A Highly Efficient Gradient Boosting.md`
 - PR-AUC for imbalanced evaluation: `docs/literature/cards/Saito_Rehmsmeier_2015_Precision_Recall_Plot.md`
 - Leakage/sampling guardrail: `docs/literature/cards/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.md`
+- Classical oversampling control: `docs/literature/cards/Chawla_2002_SMOTE.md`
+- Latent-space oversampling anchor: `docs/literature/cards/Dablain_2022_DeepSMOTE.md`
 - IEEE-CIS preprocessing and AE family: `docs/literature/cards/Alharbi_2026_Multi_AE_Generative_Ensemble_IEEE-CIS.md`
 - AE anomaly framing on IEEE-CIS: `docs/literature/cards/Jiang_2023_UAAD_FDNet_Autoencoder_IEEE-CIS.md`
 - Dataset shift limitation: `docs/literature/cards/Lucas_2019_Dataset_Shift_Credit_Card_Fraud.md`

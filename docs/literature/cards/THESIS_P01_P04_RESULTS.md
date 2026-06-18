@@ -13,7 +13,7 @@ bab: "4,5"
 source: "../../ecommerce_fraud_detection/archive/docs/chronological_evidence/HISTORICAL_EXPERIMENT_REGISTRY.md"
 ---
 
-# Hasil Eksperimen P01–P04 (post-fix 2026-06-16)
+# Hasil Eksperimen P01-P04 (post-fix 2026-06-16)
 
 ## Ringkasan
 

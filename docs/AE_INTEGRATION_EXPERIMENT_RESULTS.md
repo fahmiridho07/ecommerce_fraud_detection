@@ -281,11 +281,12 @@ AE-specific contribution on A1: ae vs smote_nc = +0.025889,
 CI [+0.02288, +0.02899], p(delta<=0)=0.000 -> on the dense representation the AE
 SIGNIFICANTLY beats SMOTE-NC. This is the opposite of the A0 result (tie).
 
-Interpretation (representation-dependence, consistent with DeepSMOTE, Dablain et
-al. 2022): AE latent-space interpolation produces more on-manifold synthetic
-samples than raw-space SMOTE specifically on dense, high-dimensional, correlated
-continuous features. On the raw NaN-bearing A0 representation, LightGBM's native
-missing handling and the sparse mixed space remove that advantage, so they tie.
+Interpretation (representation-dependence, consistent with classical SMOTE from
+Chawla et al. 2002 and DeepSMOTE from Dablain et al. 2022): AE latent-space
+interpolation produces more on-manifold synthetic samples than raw-space SMOTE
+specifically on dense, high-dimensional, correlated continuous features. On the
+raw NaN-bearing A0 representation, LightGBM's native missing handling and the
+sparse mixed space remove that advantage, so they tie.
 
 Split-seed robustness (CONFIRMED). AE vs SMOTE-NC on A1 across four split seeds
 (each with an independent synthesis seed), n_estimators=800:

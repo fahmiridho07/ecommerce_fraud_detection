@@ -1,6 +1,6 @@
 # Literature Index — Tugas Akhir IEEE-CIS
 
-Indeks 55 referensi. **Kartu ringkas** di `_cards/`; **PDF** di `2. Reference/` adalah source of truth untuk angka dan kutipan.
+Indeks 57 referensi. **Kartu ringkas** di `_cards/`; **PDF** di `2. Reference/` adalah source of truth untuk angka dan kutipan.
 
 Status note: experiment metrics listed here are historical chronological
 references unless explicitly marked as stratified rerun results.
@@ -13,7 +13,7 @@ references unless explicitly marked as stratified rerun results.
 | Moradi 2025 (literature) | 0.891 AUC-PR | FE + SMOTE; **tidak comparable** |
 | P02 vs prevalence ~3.5% | — | Laporkan no-skill baseline (Williams 2021) |
 
-## Core papers (20)
+## Core papers (22)
 
 | Priority | Authors | Year | Comparable? | Bab | PDF | Card |
 |----------|---------|------|-------------|-----|-----|------|
@@ -21,6 +21,8 @@ references unless explicitly marked as stratified rerun results.
 | core | Dal Pozzolo et al. | 2018 | protocol | 3 | `2. Reference/01_Deteksi_Penipuan_E-Commerce/Credit_Card_Fraud_Detection_A_Realistic_Modeling_and_a_Novel_Learning_Strategy.pdf` | `_cards/Credit_Card_Fraud_Detection_A_Realistic_Modeling_and_a_Novel_Learning_Strategy.md` |
 | core | Thimonier et al. | 2023 | discussion | 5 | `2. Reference/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.pdf` | `_cards/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.md` |
 | core | Kabane & Ouali | 2024 | protocol | 3 | `2. Reference/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.pdf` | `_cards/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.md` |
+| core | Chawla et al. | 2002 | method-control | 2,3 | `2. Reference/02_Ketidakseimbangan_Kelas/Chawla_2002_SMOTE.pdf` | `_cards/Chawla_2002_SMOTE.md` |
+| core | Dablain et al. | 2022 | method-anchor | 2,3 | `2. Reference/02_Ketidakseimbangan_Kelas/Dablain_2022_DeepSMOTE.pdf` | `_cards/Dablain_2022_DeepSMOTE.md` |
 | core | Niu et al. | 2019 | discussion | 5 | `2. Reference/03_Autoencoder/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.pdf` | `_cards/Niu_2019_Supervised_vs_Unsupervised_Fraud_Detection.md` |
 | core | Ke et al. | 2017 | theory | 2 | `2. Reference/04_LightGBM/LightGBM A Highly Efficient Gradient Boosting.pdf` | `_cards/LightGBM A Highly Efficient Gradient Boosting.md` |
 | core | Ding et al. | 2024 | partial | 2 | `2. Reference/05_Integrasi_Autoencoder_LightGBM/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.pdf` | `_cards/Ding_2024_AutoEncoder_Enhanced_LightGBM_Fraud_Detection.md` |
@@ -38,7 +40,7 @@ references unless explicitly marked as stratified rerun results.
 | core | Moradi et al. | 2025 | no | 2,5 | `2. Reference/08_Dataset_IEEE-CIS/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.pdf` | `_cards/Moradi_2025_Ensemble_AUC_PR_IEEE-CIS.md` |
 | core | Nguyen et al. | 2022 | partial | 2 | `2. Reference/08_Dataset_IEEE-CIS/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.pdf` | `_cards/Nguyen_2022_Card_Fraud_Detection_CatBoost_DNN.md` |
 
-## Semua referensi (55)
+## Semua referensi (57)
 
 | Folder | File | Priority | PDF | Card |
 |--------|------|----------|-----|------|
@@ -48,6 +50,8 @@ references unless explicitly marked as stratified rerun results.
 | 01_Deteksi_Penipuan_E-Commerce | Financial Fraud A Review of Anomaly Detection Techniques and Recent Advance | supporting | `2. Reference/01_Deteksi_Penipuan_E-Commerce/Financial Fraud A Review of Anomaly Detection Techniques and Recent Advance.pdf` | — |
 | 01_Deteksi_Penipuan_E-Commerce | Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments | core | `2. Reference/01_Deteksi_Penipuan_E-Commerce/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.pdf` | `_cards/Thimonier_2023_Anomaly_Detection_Fraud_Online_Payments.md` |
 | 02_Ketidakseimbangan_Kelas | Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection | core | `2. Reference/02_Ketidakseimbangan_Kelas/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.pdf` | `_cards/Kabane_2024_Sampling_Leakage_XGBoost_Fraud_Detection.md` |
+| 02_Ketidakseimbangan_Kelas | Chawla_2002_SMOTE | core | `2. Reference/02_Ketidakseimbangan_Kelas/Chawla_2002_SMOTE.pdf` | `_cards/Chawla_2002_SMOTE.md` |
+| 02_Ketidakseimbangan_Kelas | Dablain_2022_DeepSMOTE | core | `2. Reference/02_Ketidakseimbangan_Kelas/Dablain_2022_DeepSMOTE.pdf` | `_cards/Dablain_2022_DeepSMOTE.md` |
 | 02_Ketidakseimbangan_Kelas | Survey on deep learning with class imbalance | supporting | `2. Reference/02_Ketidakseimbangan_Kelas/Survey on deep learning with class imbalance.pdf` | — |
 | 02_Ketidakseimbangan_Kelas | Zhao_2023_Improved_LightGBM_Imbalanced_Data | supporting | `2. Reference/02_Ketidakseimbangan_Kelas/Zhao_2023_Improved_LightGBM_Imbalanced_Data.pdf` | — |
 | 03_Autoencoder | Hinton_Salakhutdinov_2006_Reducing_Dimensionality_Neural_Networks | supporting | `2. Reference/03_Autoencoder/Hinton_Salakhutdinov_2006_Reducing_Dimensionality_Neural_Networks.pdf` | — |

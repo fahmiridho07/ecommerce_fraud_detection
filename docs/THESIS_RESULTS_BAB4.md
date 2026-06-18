@@ -118,11 +118,11 @@ signifikan setelah ketiganya di-tune adil**. Margin AE-vs-SMOTE menyusut dari
 AE bukan artefak baseline yang kurang disetel. Model AE-augmented tuned (0.850)
 juga kompetitif dengan baseline preprocessing terkuat staging (~0.856).
 
-Interpretasi (ber-anchor DeepSMOTE, Dablain et al. 2022): interpolasi di ruang
-laten AE menghasilkan sampel sintetis yang lebih on-manifold daripada interpolasi
-SMOTE di ruang fitur mentah, **khususnya pada data padat berdimensi tinggi yang
-berkorelasi** (rezim A1). Pada representasi A0 yang jarang/NaN-native, keunggulan
-itu hilang.
+Interpretasi (ber-anchor SMOTE klasik, Chawla et al. 2002, dan DeepSMOTE,
+Dablain et al. 2022): interpolasi di ruang laten AE menghasilkan sampel sintetis
+yang lebih on-manifold daripada interpolasi SMOTE di ruang fitur mentah,
+**khususnya pada data padat berdimensi tinggi yang berkorelasi** (rezim A1).
+Pada representasi A0 yang jarang/NaN-native, keunggulan itu hilang.
 
 ## 4.5 Robustness
 
