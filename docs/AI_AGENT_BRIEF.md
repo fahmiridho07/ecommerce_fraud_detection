@@ -1,13 +1,13 @@
 # AI Agent Brief
 
-Status: active agent-facing guide after the 2026-06-17 stratified split reset.
+Status: active agent-facing guide for Bab 4 writing, 2026-06-18.
 
 Use this file to orient future AI agents before editing code, docs, notebooks, or
 thesis prose.
 
 ## Current Truth
 
-The active thesis protocol is a clean stratified holdout reset:
+The active thesis protocol is:
 
 ```text
 split_strategy=stratified_holdout
@@ -16,51 +16,63 @@ random_state = 42
 primary metric = Average Precision / PR-AUC
 ```
 
-There is no active thesis-facing winner yet after this reset. All chronological
-P01-P04, AE-05, preprocessing-ablation, and score-ensemble numbers are
-historical evidence only until rerun under the active split.
+There is now an active thesis-facing result after the stratified reset:
+
+- AE latent/reconstruction features lose or tie against LightGBM.
+- Minority augmentation improves the baseline under stratified and chronological
+  checks.
+- The AE-specific contribution is conditional: AE latent-space oversampling ties
+  SMOTE-NC on raw/NaN-native A0 features, but beats SMOTE-NC on dense
+  Alharbi-style A1 features.
+- Final tuned A1 comparison: baseline AP 0.838988, SMOTE-NC AP 0.843476,
+  AE latent-SMOTE AP 0.850031. AE beats baseline by +0.011043 AP and SMOTE-NC
+  by +0.006555 AP, both with paired-bootstrap support.
+
+All chronological P01-P04, AE-05, preprocessing-ablation, and score-ensemble
+numbers are historical evidence only.
 
 Do not mix old chronological metrics with new stratified metrics in one result
 table.
 
 ## Research Objective
 
-The current goal is to build the strongest defensible paper-anchored
-preprocessing baseline, then test whether an Autoencoder contribution improves
-that baseline with statistical support.
-
-The desired thesis conclusion may be "AE significantly improves the strongest
-baseline", but the repository must not force that conclusion. If the best
-paper-anchored LightGBM baseline beats the tested AE variants, document that
-honestly.
+The current goal is to write Bab 4 from the completed active results without
+overclaiming. The defensible conclusion is that Autoencoder contributes as a
+latent-space oversampler on dense frequency-encoded representations, not as a
+feature extractor and not as a universal replacement for classical oversampling.
 
 ## Read Order
 
 1. `docs/THESIS_SCOPE.md`
-2. `docs/STRATIFIED_SPLIT_RESET.md`
-3. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+2. `docs/THESIS_RESULTS_BAB4.md`
+3. `docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md`
 4. `docs/EXPERIMENT_REGISTRY.md`
-5. `src/README.md`
-6. `docs/literature/INDEX.md`
+5. `docs/EDA_AND_METHODOLOGY_AUDIT.md`
+6. `docs/STRATIFIED_SPLIT_RESET.md`
+7. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+8. `src/README.md`
+9. `docs/literature/INDEX.md`
 
 PDFs under `../2. Reference/` are the source of truth for exact claims and
 quotes. Literature cards are summaries, not citation substitutes.
 
-## Active Experiment Ladder
+## Active Result Map
 
-Run from simple to complex:
+The active rerun ladder is complete. Do not rerun expensive experiments unless a
+new scope decision is made or an artifact is missing.
 
 | ID | Purpose | Script |
 |----|---------|--------|
 | S0 | Verify split proportions and no row overlap | `python src/check_data_split.py` |
-| A0 | Original-feature LightGBM baseline | `python src/train_baseline_lgbm.py --output-dir outputs/stratified_reset/baseline_lgbm_default` |
-| A0-T | Tuned original-feature LightGBM | `python src/tune_lgbm_optuna.py --model_type baseline_lgbm --tuning_profile final --n_trials 15 --output-dir outputs/stratified_reset/optuna/baseline_lgbm_tuned --skip-global-comparison-update` |
-| A1 | Alharbi-style preprocessing baseline | `python src/train_paper_preprocessing_lgbm.py --output-dir outputs/stratified_reset/alharbi_style_lgbm_default` |
-| A1-T | Tuned Alharbi-style baseline | `python src/tune_lgbm_optuna.py --model_type alharbi_lgbm --tuning_profile final --n_trials 15 --output-dir outputs/stratified_reset/optuna/alharbi_lgbm_tuned --skip-global-comparison-update` |
-| A1-AE | AE-LightGBM under the same split | Run only after A1-T exists. Use the same split and train-only AE preprocessing. |
-| A1-E | Feature-level or score-level AE integration | Promote only if it beats the strongest A1 baseline with paired-bootstrap support. |
+| AE-F | A0 feature/score AE integration | `src/run_ae_integration_experiment.py` |
+| AE-G | A0 AE latent-space augmentation | `src/run_ae_augmentation_experiment.py` |
+| AE-G-fair | A0 AE vs SMOTE-NC/random controls | `src/run_fair_augmentation_comparison.py` |
+| AE-G-rep | Split-seed robustness | `src/run_repeated_split_validation.py` |
+| AE-A1 | Dense A1 AE vs SMOTE-NC | `src/run_strong_baseline_augmentation.py` |
+| AE-A1-TUNED | Fair tuned-vs-tuned comparison | `src/tune_a1_augmentation_optuna.py` |
+| Figures | Bab 4 result figures | `src/generate_thesis_figures.py` |
 
-Use `outputs/stratified_reset/` for new active reruns. Keep
+Use `outputs/stratified_reset/` for active artifacts. Keep
 `outputs/initial_proposal/` as historical chronological evidence.
 
 ## Active Preprocessing Contract
@@ -99,8 +111,9 @@ An AE branch can become thesis-facing only if all are true:
 
 Preferred AE framing:
 
-- AE as representation/anomaly/complementary score signal;
-- not AE as a guaranteed replacement for raw tabular features.
+- AE as a latent-space oversampler on dense representations;
+- not AE as a feature extractor that is guaranteed to improve LightGBM;
+- not AE as a universal replacement for SMOTE across all representations.
 
 ## Literature Anchors
 
@@ -119,11 +132,13 @@ Use these first:
 - Do not cite AE-05 or the fixed score ensemble as the active winner after the
   split reset.
 - Do not compare old chronological AP directly against new stratified AP.
-- Do not use broad UID, velocity, target encoding, rolling windows, SMOTE, or
-  stacked ensembles as mainline methods without a new scope decision.
+- Do not use broad UID, velocity, target encoding, rolling windows, or stacked
+  ensembles as mainline methods without a new scope decision.
+- Do not claim SOTA absolute; claim a controlled AE-vs-SMOTE contribution on A1
+  dense features.
 - Do not use `project/` as canonical source; it is local scratch and ignored.
-- Do not edit thesis DOCX/PDF claims before the active stratified rerun produces
-  a recorded result.
+- Do not edit thesis DOCX/PDF claims unless they are sourced from
+  `docs/THESIS_RESULTS_BAB4.md` and the supporting registry.
 
 ## Safe Validation
 

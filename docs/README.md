@@ -4,15 +4,18 @@ Status: active documentation map after cleanup.
 
 Read active docs in this order:
 
-1. `THESIS_SCOPE.md` - source of truth for scope and decision rules.
+1. `THESIS_SCOPE.md` - source of truth for active scope and claim boundaries.
 2. `AI_AGENT_BRIEF.md` - compact guide for future AI agents.
-3. `EXPERIMENT_REGISTRY.md` - active stratified experiment registry.
-4. `STRATIFIED_SPLIT_RESET.md` - split reset decision and commands.
-5. `PAPER_ANCHORED_PREPROCESSING_RESET.md` - A1 preprocessing anchor plan.
-6. `AE_BASELINE_GAP_DIAGNOSIS.md` - why AE does not yet beat the baseline, and allowed next experiments.
-7. `BAB3_METHOD_ADJUSTMENT.md` - current method prose outline.
-8. `REPRODUCIBILITY.md` - validation and artifact policy.
-9. `INITIAL_PROPOSAL_RERUN_GUIDE.md` - historical P01-P04 reproduction only.
+3. `THESIS_RESULTS_BAB4.md` - consolidated, write-ready Bab 4 results in Indonesian.
+4. `AE_INTEGRATION_EXPERIMENT_RESULTS.md` - detailed AE results, controls, and bootstrap CIs.
+5. `EXPERIMENT_REGISTRY.md` - active stratified experiment registry.
+6. `EDA_AND_METHODOLOGY_AUDIT.md` - root-to-tip data/methodology audit and limitations.
+7. `STRATIFIED_SPLIT_RESET.md` - split reset decision and original rerun ladder.
+8. `PAPER_ANCHORED_PREPROCESSING_RESET.md` - A1 preprocessing anchor plan.
+9. `AE_BASELINE_GAP_DIAGNOSIS.md` - why AE feature-integration does not beat the baseline.
+10. `BAB3_METHOD_ADJUSTMENT.md` - current method prose outline.
+11. `REPRODUCIBILITY.md` - validation and artifact policy.
+12. `INITIAL_PROPOSAL_RERUN_GUIDE.md` - historical P01-P04 reproduction only.
 
 Historical chronological evidence lives outside this active docs root:
 

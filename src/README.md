@@ -1,6 +1,6 @@
 # Source Script Index
 
-Status: active source tree after the 2026-06-17 stratified split reset.
+Status: active source tree for Bab 4 writing after the stratified split reset.
 
 All active training scripts default to:
 
@@ -22,18 +22,33 @@ historical archived results.
 - `evaluation.py` - AP, ROC-AUC, threshold, and confusion-matrix metrics.
 - `utils.py` - JSON, logging, seed, and filesystem helpers.
 
-## Active Rerun Scripts
+## Active Thesis Scripts
 
 - `check_data_split.py` - validates the default stratified split.
 - `train_baseline_lgbm.py` - baseline LightGBM default.
 - `tune_lgbm_optuna.py --model_type baseline_lgbm` - tuned baseline LightGBM.
 - `train_paper_preprocessing_lgbm.py` - A1 Alharbi-style preprocessing baseline.
 - `tune_lgbm_optuna.py --model_type alharbi_lgbm` - tuned A1 baseline.
+- `train_autoencoder_normal_masked.py` - mask-aware AE diagnostic branch.
+- `run_ae_integration_experiment.py` - A0 feature/score AE integration; final verdict is negative.
+- `run_ae_augmentation_experiment.py` - AE latent-space augmentation on A0.
+- `run_fair_augmentation_comparison.py` - random/SMOTE-NC/AE matched controls.
+- `run_repeated_split_validation.py` - split-seed robustness for augmentation.
+- `run_strong_baseline_augmentation.py` - A1 dense AE-vs-SMOTE comparison.
+- `run_vae_augmentation_experiment.py` - VAE prior control against SMOTE-NC.
+- `tune_a1_augmentation_optuna.py` - final A1 tuned-vs-tuned comparison.
+- `generate_thesis_figures.py` - generates active Bab 4 figures from `outputs/stratified_reset/`.
+
+## Legacy Active-Path Entrypoints
+
+These remain available for reproducibility but are not the shortest path for
+Bab 4 writing because the consolidated harnesses above already produced the
+active results.
+
 - `train_autoencoder_robust.py` - robust AE latent feature generation.
 - `train_ae_lgbm.py` - AE-LightGBM latent integration.
-- `train_autoencoder_normal_masked.py` - mask-aware AE diagnostic branch.
 - `train_enhanced_preprocessing_lgbm.py` - preprocessing ablations and AE add-on branches.
-- `train_score_ensemble.py` - score-level ensemble helper, only after matching split artifacts exist.
+- `train_score_ensemble.py` - score-level ensemble helper.
 
 ## Historical / Diagnostic Scripts
 

@@ -1,6 +1,6 @@
 # Thesis Scope
 
-Status: active cleanup reset, 2026-06-17.
+Status: active Bab 4 writing scope, 2026-06-18.
 
 This document is the source of truth for the cleaned repository after the split
 protocol reset. The active thesis protocol is now **stratified holdout**. Older
@@ -17,7 +17,7 @@ The thesis studies fraud detection on the IEEE-CIS Fraud Detection dataset using
 - Paper-anchored preprocessing branches, starting from Alharbi-style IEEE-CIS
   preprocessing.
 - Autoencoder representation learning on anonymized numerical `V*` features.
-- AE-LightGBM variants only after the stratified baseline is rerun.
+- Autoencoder latent-space oversampling as the final thesis-facing AE mechanism.
 - Average Precision / PR-AUC as the primary metric, with ROC-AUC, F1, MCC, and
   confusion matrices as supporting metrics.
 
@@ -40,11 +40,24 @@ Guardrails:
 
 ## Current Active Result
 
-There is **no active thesis-facing winner yet** after this reset.
+The active thesis-facing result is now:
+
+- AE latent and reconstruction-error features **do not help** LightGBM; all
+  feature-level AE variants lose or tie against the matched baseline.
+- Minority augmentation improves the baseline under both stratified and temporal
+  checks.
+- The AE-specific contribution is representation-dependent: AE latent-space
+  oversampling ties SMOTE-NC on raw/NaN-native A0 features, but significantly
+  beats SMOTE-NC on dense Alharbi-style A1 features.
+- The final tuned A1 comparison is: baseline AP 0.838988, SMOTE-NC AP 0.843476,
+  AE latent-SMOTE AP 0.850031. AE beats the tuned baseline by +0.011043 AP and
+  tuned SMOTE-NC by +0.006555 AP, both with paired-bootstrap support.
+
+Use `docs/THESIS_RESULTS_BAB4.md` for write-ready prose and
+`docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md` for the detailed empirical record.
 
 All metrics produced before the stratified reset are historical and must not be
-compared directly with future stratified reruns. The next valid thesis result
-must come from a clean stratified rerun.
+compared directly with active stratified result tables.
 
 ## Historical Archive
 
@@ -67,19 +80,20 @@ Detailed historical evidence lives in:
 archive/docs/chronological_evidence/
 ```
 
-## Active Rerun Ladder
+## Completed Rerun Ladder
 
-Run from the narrowest defensible branch outward:
+The active ladder has been executed from simple to complex:
 
 1. `S0`: validate stratified split summary.
 2. `A0`: baseline LightGBM on original features under stratified holdout.
-3. `A0-T`: tuned baseline LightGBM under stratified holdout.
-4. `A1`: Alharbi-style preprocessing baseline under stratified holdout.
-5. `A1-T`: tuned A1 baseline under stratified holdout.
-6. `A1-AE`: AE-LightGBM branch using the same split and train-only fitted
-   preprocessing.
-7. `A1-E`: score-level or feature-level AE integration only if it beats the
-   strongest A1 baseline under the same stratified test split.
+3. `AE-F`: feature-level and score-level AE integration on A0.
+4. `AE-G`: AE latent-space minority augmentation on A0.
+5. `AE-G-fair`: matched random oversampling and SMOTE-NC controls.
+6. `AE-G-rep`: repeated split validation.
+7. `AE-G-temp`: chronological robustness check.
+8. `AE-A1`: dense Alharbi-style representation, AE vs SMOTE-NC.
+9. `AE-A1-FB`: full-budget confirmation.
+10. `AE-A1-TUNED`: fair Optuna tuned-vs-tuned comparison.
 
 Decision rule:
 
@@ -97,7 +111,8 @@ These remain outside active thesis claims unless a new written decision gate is
 created:
 
 - Chronological or time-aware deployment evaluation as the main experiment.
-- SMOTE/ADASYN as a mainline method instead of appendix/robustness branch.
+- Classical SMOTE/ADASYN as the standalone thesis contribution. SMOTE-NC is used
+  as a required control for isolating the AE-specific contribution.
 - Target encoding without strict out-of-fold leakage controls.
 - Broad UID, velocity, rolling-window, behavioral, or causal feature families.
 - GBDT backend shootouts with XGBoost/CatBoost.
@@ -109,8 +124,10 @@ created:
 When documents disagree, use this order:
 
 1. `docs/THESIS_SCOPE.md`
-2. `docs/STRATIFIED_SPLIT_RESET.md`
-3. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+2. `docs/THESIS_RESULTS_BAB4.md`
+3. `docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md`
 4. `docs/EXPERIMENT_REGISTRY.md`
-5. `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`
-6. `src/README.md`
+5. `docs/STRATIFIED_SPLIT_RESET.md`
+6. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+7. `docs/INITIAL_PROPOSAL_RERUN_GUIDE.md`
+8. `src/README.md`
