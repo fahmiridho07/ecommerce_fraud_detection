@@ -24,6 +24,11 @@ historical archived results.
 
 ## Active Thesis Scripts
 
+Shortest Bab 4 path: for the final active claim, focus on
+`tune_a1_augmentation_optuna.py`, `run_strong_baseline_augmentation.py`,
+`run_repeated_split_validation.py`, and `generate_thesis_figures.py`. The A0
+fair-comparison scripts are supporting controls, not the final headline result.
+
 - `check_data_split.py` - validates the default stratified split.
 - `train_baseline_lgbm.py` - baseline LightGBM default.
 - `tune_lgbm_optuna.py --model_type baseline_lgbm` - tuned baseline LightGBM.

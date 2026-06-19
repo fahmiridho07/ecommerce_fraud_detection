@@ -43,6 +43,7 @@ feature extractor and not as a universal replacement for classical oversampling.
 
 ## Read Order
 
+0. `docs/SKRIPSI_INTI.md` if the user needs the shortest human-facing anchor.
 1. `docs/THESIS_SCOPE.md`
 2. `docs/THESIS_RESULTS_BAB4.md`
 3. `docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md`

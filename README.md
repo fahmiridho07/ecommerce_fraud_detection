@@ -25,6 +25,8 @@ stratified result tables.
 The source of truth is [`docs/THESIS_SCOPE.md`](docs/THESIS_SCOPE.md). The
 write-ready Bab 4 result draft is
 [`docs/THESIS_RESULTS_BAB4.md`](docs/THESIS_RESULTS_BAB4.md).
+If the project starts feeling too wide, use
+[`docs/SKRIPSI_INTI.md`](docs/SKRIPSI_INTI.md) as the one-page anchor.
 
 ## Active Result Snapshot
 
@@ -43,6 +45,7 @@ Historical chronological results remain in
 ## Navigation
 
 - [`docs/THESIS_SCOPE.md`](docs/THESIS_SCOPE.md) - active thesis scope and exclusion rules.
+- [`docs/SKRIPSI_INTI.md`](docs/SKRIPSI_INTI.md) - one-page human anchor for the final method and claim.
 - [`docs/README.md`](docs/README.md) - documentation map.
 - [`docs/AI_AGENT_BRIEF.md`](docs/AI_AGENT_BRIEF.md) - quick orientation for future AI agents.
 - [`docs/STRATIFIED_SPLIT_RESET.md`](docs/STRATIFIED_SPLIT_RESET.md) - cleanup decision and rerun ladder.

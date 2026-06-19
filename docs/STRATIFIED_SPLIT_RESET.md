@@ -1,9 +1,11 @@
 # Stratified Split Reset
 
-Status: active cleanup record, 2026-06-17.
+Status: completed cleanup decision record, 2026-06-17.
 
 Purpose: document the project cleanup before rerunning experiments under the
-new thesis protocol.
+new thesis protocol. The active rerun ladder was completed on 2026-06-18; see
+`THESIS_SCOPE.md`, `THESIS_RESULTS_BAB4.md`, and `EXPERIMENT_REGISTRY.md` for
+current results.
 
 ## Decision
 
@@ -78,9 +80,12 @@ The following are archived historical evidence:
 Do not place historical chronological numbers in the same result table as new
 stratified numbers.
 
-## Rerun Order
+## Original Rerun Order
 
-Use this order after cleanup:
+This order is preserved for traceability. It is not a current to-do list unless
+the scope is reopened or an artifact must be regenerated.
+
+The original cleanup run used this order:
 
 ```bash
 python src/check_data_split.py
@@ -119,10 +124,11 @@ python src/tune_lgbm_optuna.py \
 
 ## Thesis Wording
 
-Use this wording until the stratified rerun is complete:
+Use this final wording for the active scope:
 
 > Setelah reset metodologi, eksperimen utama menggunakan stratified holdout
-> 60/20/20 dengan random seed tetap. Hasil chronological sebelumnya
-> dipertahankan sebagai arsip eksplorasi dan tidak digunakan sebagai klaim
-> utama. Evaluasi temporal dan concept drift dibahas sebagai keterbatasan dan
-> saran penelitian lanjutan.
+> 60/20/20 dengan random seed tetap. Hasil final menunjukkan bahwa autoencoder
+> berkontribusi sebagai oversampler di latent space pada representasi A1 dense,
+> bukan sebagai feature extractor universal. Hasil chronological sebelumnya
+> dipertahankan sebagai arsip eksplorasi, sedangkan evaluasi temporal dan
+> concept drift dibahas sebagai keterbatasan dan saran penelitian lanjutan.

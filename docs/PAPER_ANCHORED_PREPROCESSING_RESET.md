@@ -1,9 +1,12 @@
 # Paper-Anchored Preprocessing Reset
 
-Status: active plan after stratified split reset.
+Status: completed preprocessing decision record after stratified split reset.
 
 Purpose: rebuild preprocessing around a small number of explicit paper anchors,
-instead of accumulating useful but loosely justified engineering features.
+instead of accumulating useful but loosely justified engineering features. The
+A1 branch described here has since become the final active representation for
+the tuned AE-vs-SMOTE comparison; see `THESIS_SCOPE.md` and
+`THESIS_RESULTS_BAB4.md` for current results.
 
 ## Why Reset
 
@@ -203,7 +206,11 @@ not:
 directly adopted from recent paper preprocessing protocols
 ```
 
-## Rerun Ladder
+## Original Rerun Ladder
+
+This ladder is preserved as the decision path that produced the current active
+result. It is not a current to-do list unless the thesis scope is deliberately
+reopened.
 
 1. S0 split check: default stratified split summary.
 2. A0 baseline: original features + fixed/default LightGBM.
@@ -221,12 +228,14 @@ Decision rule:
 - promote any AE-integrated branch only if it beats the strongest A1 baseline
   on test AP with paired-bootstrap confidence interval above zero.
 
-## Thesis Wording For Now
+## Current Thesis Wording
 
-> Current preprocessing work is being reset to a smaller paper-anchored protocol
-> based primarily on Alharbi et al. (2026), evaluated under a stratified
-> train/validation/test split with train-only fitted transformations. Temporal
-> evaluation and concept drift are retained as limitations and future work.
+> The final main experiment uses a compact, paper-anchored A1 preprocessing
+> protocol based primarily on Alharbi et al. (2026), evaluated under a
+> stratified train/validation/test split with train-only fitted transformations.
+> On this dense representation, AE latent-space oversampling improves LightGBM
+> over the matched baseline and SMOTE-NC. Temporal evaluation and concept drift
+> are retained as limitations and future work.
 
 ## Source Anchors
 
