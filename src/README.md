@@ -44,6 +44,22 @@ fair-comparison scripts are supporting controls, not the final headline result.
 - `tune_a1_augmentation_optuna.py` - final A1 tuned-vs-tuned comparison.
 - `generate_thesis_figures.py` - generates active Bab 4 figures from `outputs/stratified_reset/`.
 
+## Advisor Diagnostic Scripts
+
+These answer the advisor-facing "stick to the original proposal, diagnose the
+loss, then test proposal-near fixes" thread. They are stratified-reset evidence,
+but they should be interpreted as diagnostics unless promoted by
+`docs/THESIS_SCOPE.md`.
+
+- `run_original_proposal_stratified.py` - literal original-proposal AE V-latent replacement rerun.
+- `run_ae_feature_improvement_ladder.py` - proposal-near AE feature-improvement ladder.
+- `run_ae_diagnosis_fix_ladder.py` - missingness-aware, masked-loss, selective, error, and latent-activation fixes.
+- `run_broad_ae_feature_ladder.py` - broader AE feature-learning checks across feature families.
+- `run_ding_anchor_replication.py` - Ding-style ULB credit-card anchor replication.
+- `run_ding_ieeecis_strict.py` - strict Ding-style transfer check on IEEE-CIS.
+- `diagnose_initial_design_replace_v.py` - V-replacement diagnosis and latent-dimension sweep.
+- `analyze_missingness.py` - lightweight missingness/fraud-lift diagnostic.
+
 ## Legacy Active-Path Entrypoints
 
 These remain available for reproducibility but are not the shortest path for
@@ -74,6 +90,7 @@ stratified reset and documented in `docs/EXPERIMENT_REGISTRY.md`.
 - `tune_ae_hybrid_reconstruction_lgbm.py`
 - `compare_enhanced_preprocessing_bootstrap.py`
 - `compare_ae_hybrid_recon_bootstrap.py`
+- `run_initial_design_replace_v_stratified.py`
 
 ## Validation
 

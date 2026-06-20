@@ -37,6 +37,8 @@ Detailed bootstrap CIs and supporting runs are in
 | AE-A1 | Dense A1 AE vs SMOTE-NC | `outputs/stratified_reset/strong_baseline_augmentation/` | Complete, AE wins | 0.784061 |
 | AE-A1-FB | Dense A1 full-budget confirmation | `outputs/stratified_reset/strong_baseline_full_budget/` | Complete, AE wins | 0.784061 |
 | AE-A1-TUNED | Dense A1 tuned-vs-tuned comparison | `outputs/stratified_reset/a1_tuned_comparison/` | Complete, final headline | 0.850031 |
+| OP-FIX | Original proposal AE feature-improvement ladder | `outputs/stratified_reset/ae_feature_improvement_ladder/` | Complete, no AE variant beats tuned LightGBM | 0.871309 |
+| OP-FIX2 | Diagnosis-driven AE fix ladder | `outputs/stratified_reset/ae_diagnosis_fix_ladder/` | Complete, no AE variant beats tuned LightGBM | 0.871646 |
 
 ## S0 Split Validation
 
@@ -76,6 +78,154 @@ Observed staging snapshot:
 Interpretation: under this staging stratified split, the tabular preprocessing
 baseline is very strong and AE does not beat it on PR-AUC. Use it only as
 diagnostic context, not as an active Bab 4 result table.
+
+## Advisor Diagnostic: Original Proposal Literal Rerun (2026-06-19)
+
+This rerun answers the advisor-facing question: whether the seminar proposal
+original design had already been tested under its own stated stratified protocol.
+Full diagnosis is in `docs/PROPOSAL_EXPERIMENT_ALIGNMENT_AUDIT.md`. Harness:
+`src/run_original_proposal_stratified.py`.
+
+Contract reproduced: IEEE-CIS stratified 60/20/20, baseline LightGBM, V-only
+Autoencoder on `V1-V339` with zero-imputation and z-score scaling, encoder
+latent replacement of original V features, no resampling, and Optuna/TPE for
+both baseline and AE-LightGBM.
+
+Output:
+
+```text
+outputs/stratified_reset/original_proposal_v_latent_replacement/
+```
+
+| ID | Experiment | Test AP | Delta vs matched baseline | p(delta<=0) | Status |
+|----|------------|--------:|--------------------------:|------------:|--------|
+| OP-B0 | Original proposal baseline LightGBM default | 0.859857 | reference | - | Complete |
+| OP-AE0 | Original proposal AE V-latent replacement default | 0.849081 | -0.010776 | 1.000 | Complete, loses |
+| OP-BT | Original proposal baseline LightGBM tuned | 0.873133 | reference | - | Complete |
+| OP-AET | Original proposal AE V-latent replacement tuned | 0.860110 | -0.013023 | 1.000 | Complete, loses |
+
+Conclusion: the exact original proposal mechanism has now been tested and is
+not competitive against its matched LightGBM baseline. The likely cause is
+information loss from replacing 339 raw V features, including useful missingness
+patterns, with a 32-dimensional unsupervised reconstruction latent. This supports
+keeping original proposal results as diagnostic evidence and applying any
+improvement as an Autoencoder + LightGBM integration fix, not as an unrelated
+method jump.
+
+## Advisor Diagnostic Follow-Up: AE Feature Improvement Ladder (2026-06-19)
+
+Full detail is in `docs/AE_FEATURE_IMPROVEMENT_LADDER_RESULTS.md`. Harness:
+`src/run_ae_feature_improvement_ladder.py`.
+
+Question: after the literal original-proposal AE replacement loses, do
+proposal-consistent fixes recover enough AP to beat tuned LightGBM?
+
+Reference:
+
+```text
+original proposal tuned LightGBM test AP = 0.873133
+```
+
+Output:
+
+```text
+outputs/stratified_reset/ae_feature_improvement_ladder/
+```
+
+| ID | Experiment | Test AP | Delta vs tuned LightGBM | p(delta<=0) | Status |
+|----|------------|--------:|------------------------:|------------:|--------|
+| OP-FIX-S1 | Replace V with larger latent dim, best LD64 | 0.859875 | -0.013258 | 1.00 | Complete, loses |
+| OP-FIX-S2 | Concatenate original V + AE latent, best LD32 | 0.864217 | -0.008917 | 1.00 | Complete, loses |
+| OP-FIX-S3 | Denoising AE concat LD32 | 0.864170 | -0.008963 | 1.00 | Complete, loses |
+| OP-FIX-S4R | Partial reconstruction replace high-missing V | 0.871309 | -0.001824 | 0.89 | Complete, closest but does not beat |
+| OP-FIX-S4A | Partial reconstruction append high-missing V | 0.868841 | -0.004292 | 1.00 | Complete, loses |
+
+Conclusion: no AE feature-improvement variant beat tuned LightGBM. Partial
+replacement of 159 high-missing V features is the closest and substantially
+narrows the gap, but still remains below the tuned LightGBM reference. This
+strengthens the diagnosis that full V replacement causes information loss, while
+also showing that preserving original V features and limiting AE reconstruction
+to noisy/missing V columns is the most defensible proposal-consistent direction.
+The deeper cause analysis and next proposal-consistent fix plan are documented
+in `docs/AE_FAILURE_DEEP_DIAGNOSIS_AND_FIX_PLAN.md`.
+
+## Advisor Diagnostic Follow-Up 2: Diagnosis-Driven AE Fix Ladder (2026-06-20)
+
+Full detail is in `docs/AE_DIAGNOSIS_FIX_LADDER_RESULTS.md`. Harness:
+`src/run_ae_diagnosis_fix_ladder.py`.
+
+Question: after partial reconstruction became the closest proposal-consistent
+direction, do missingness-aware, masked-loss, selective subset, reconstruction
+error, or latent-activation fixes beat tuned LightGBM?
+
+Reference:
+
+```text
+original proposal tuned LightGBM test AP = 0.873133
+```
+
+Output:
+
+```text
+outputs/stratified_reset/ae_diagnosis_fix_ladder/
+```
+
+| ID | Experiment | Test AP | Delta vs tuned LightGBM | p(delta<=0) | Status |
+|----|------------|--------:|------------------------:|------------:|--------|
+| OP-FIX2-S1 | Missingness-aware partial AE replace + mask | 0.870329 | -0.002804 | 0.973 | Complete, loses |
+| OP-FIX2-S2 | Masked-loss partial AE, observed-only replace | 0.871646 | -0.001487 | 0.900 | Complete, closest but does not beat |
+| OP-FIX2-S3 | Selective top-64 masked-loss partial AE | 0.871624 | -0.001509 | 0.897 | Complete, loses |
+| OP-FIX2-S4 | Reconstruction-error features, keep original V | 0.869771 | -0.003363 | 0.997 | Complete, loses |
+| OP-FIX2-S5 | Linear latent concat LD32, keep original V | 0.864650 | -0.008483 | 1.000 | Complete, loses |
+
+Conclusion: no diagnosis-driven AE fix beat tuned LightGBM. The best result is
+masked-loss partial reconstruction with observed-only replacement, which narrows
+the AP gap to `-0.001487` but remains below the tuned LightGBM reference. This
+supports the thesis-facing conclusion that the current AE feature-engineering
+family is not stronger than a tuned LightGBM on original IEEE-CIS features, even
+after proposal-consistent fixes.
+
+## Advisor Diagnostic Follow-Up 3: Broad AE Feature Ladder (2026-06-20)
+
+Full detail is in `docs/BROAD_AE_FEATURE_LADDER_RESULTS.md`. Harness:
+`src/run_broad_ae_feature_ladder.py`.
+
+Question: if the AE is not restricted to only `V` features, and instead learns
+cross-family or group-wise representations that are appended to the original
+LightGBM feature matrix, can it beat the tuned LightGBM reference while staying
+inside the original AE + LightGBM corridor?
+
+Reference:
+
+```text
+original proposal tuned LightGBM test AP = 0.873133
+```
+
+Output:
+
+```text
+outputs/stratified_reset/broad_ae_feature_ladder/
+```
+
+Runtime note: augmented LightGBM matrices repeatedly triggered native LightGBM
+crashes locally at the full tuned 999-estimator setting, so these broad
+diagnostic variants were completed with `max_lgbm_estimators=600`.
+
+| ID | Experiment | Test AP | Delta vs tuned LightGBM | p(delta<=0) | Status |
+|----|------------|--------:|------------------------:|------------:|--------|
+| OP-BROAD-S1 | All-feature AE top-192, append latent + error | 0.857028 | -0.016105 | 1.000 | Complete, loses |
+| OP-BROAD-S2 | Group-wise AE, append latent + error | 0.868076 | -0.005057 | 1.000 | Complete, best broad variant but loses |
+| OP-BROAD-S3 | All-feature AE reconstructs value + missingness mask | 0.857716 | -0.015418 | 1.000 | Complete, loses |
+| OP-BROAD-S4 | Normal-only all-feature AE anomaly error | 0.867750 | -0.005383 | 1.000 | Complete, loses |
+| OP-BROAD-S5 | All-feature AE with auxiliary fraud head | 0.848394 | -0.024739 | 1.000 | Complete, loses |
+
+Conclusion: broadening the AE beyond the `V` block does not recover enough
+signal to beat tuned LightGBM. The best broad result is group-wise AE
+(`-0.005057` AP), which suggests feature-family separation is better than one
+global AE, but still remains below the original-feature tuned LightGBM. This
+supports the cause analysis that original IEEE-CIS features already contain
+strong granular and missingness signal that AE compression/reconstruction does
+not improve for this protocol.
 
 ## Active Controlled AE Experiments (2026-06-18)
 

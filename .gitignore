@@ -99,6 +99,10 @@ credentials.json
 token.json
 kaggle.json
 
+# Node dependencies for local document-generation helpers
+node_modules/
+npm-debug.log*
+
 
 # =========================================================
 # Python

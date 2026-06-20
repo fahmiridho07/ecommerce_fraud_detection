@@ -133,7 +133,10 @@ def main(output_dir: Path, split_strategy: str = DEFAULT_SPLIT_STRATEGY, n_trial
         """Build (X_train, y_train, spw) lazily per pipeline to bound memory."""
         if name == "baseline":
             return Xa_tr, y_tr, spw_base
-        if name == "smote_nc":
+        if name == "random_oversample":
+            anchors = np.random.default_rng(seed).integers(0, n_fraud, size=n_synth)
+            syn = Xa_tr.loc[fraud].reset_index(drop=True).iloc[anchors].reset_index(drop=True)
+        elif name == "smote_nc":
             pts, _ = latent_smote_synthesis(Xf, n_synth, k_neighbors, np.random.default_rng(seed))
             syn = pd.DataFrame(pts, columns=cols)
         elif name == "ae_latent_smote":
@@ -150,7 +153,7 @@ def main(output_dir: Path, split_strategy: str = DEFAULT_SPLIT_STRATEGY, n_trial
 
     results, scores = {}, {}
     ckpt = output_dir / "partial_results.json"
-    for name in ("baseline", "smote_nc", "ae_latent_smote"):
+    for name in ("baseline", "random_oversample", "smote_nc", "ae_latent_smote"):
         Xtr, ytr, spw = build_train(name)
         info, va, te = tune_pipeline(name, Xtr, ytr, Xa_va, y_va, Xa_te, spw, n_trials, seed)
         table = threshold_selection_table(y_va, va); thr = selected_threshold_from_table(table)
@@ -166,7 +169,9 @@ def main(output_dir: Path, split_strategy: str = DEFAULT_SPLIT_STRATEGY, n_trial
     comp = {
         "ae_vs_baseline": paired_bootstrap_ap_delta(y_te, scores["baseline"], scores["ae_latent_smote"], n_bootstrap),
         "ae_vs_smote_nc": paired_bootstrap_ap_delta(y_te, scores["smote_nc"], scores["ae_latent_smote"], n_bootstrap),
+        "ae_vs_random_oversample": paired_bootstrap_ap_delta(y_te, scores["random_oversample"], scores["ae_latent_smote"], n_bootstrap),
         "smote_vs_baseline": paired_bootstrap_ap_delta(y_te, scores["baseline"], scores["smote_nc"], n_bootstrap),
+        "random_vs_baseline": paired_bootstrap_ap_delta(y_te, scores["baseline"], scores["random_oversample"], n_bootstrap),
     }
     summary = {"representation": "A1_alharbi_dense", "split_strategy": split_strategy, "n_trials": n_trials,
                "seed": seed, "target_fraud_rate": target_fraud_rate, "n_synthetic": n_synth,
@@ -175,7 +180,7 @@ def main(output_dir: Path, split_strategy: str = DEFAULT_SPLIT_STRATEGY, n_trial
 
     print("\nA1 Tuned-vs-Tuned Comparison")
     print("============================")
-    for name in ("baseline", "smote_nc", "ae_latent_smote"):
+    for name in ("baseline", "random_oversample", "smote_nc", "ae_latent_smote"):
         print(f"{name:16s} tuned test AP={results[name]['test_average_precision']:.6f}")
     for k, b in comp.items():
         print(f"{k:18s} delta={b['observed_delta_ap']:+.6f} ci=[{b['ci_2_5']:+.5f},{b['ci_97_5']:+.5f}] p(d<=0)={b['p_delta_le_0']:.3f}")

@@ -15,6 +15,7 @@ historical evidence even when their large artifacts remain under gitignored
 | `source/behavioral_fusion/` | Causal behavioral features, CDV reconstruction, late fusion, and related validators | Out of current proposal scope |
 | `source/feature_engineering_ensembles/` | Static feature engineering, UID/velocity features, FE+AE, and score ensembles | Out of current proposal scope |
 | `source/gbdt_wip/` | LightGBM/XGBoost/CatBoost backend comparison WIP | WIP only |
+| `source/kaggle_standalone/` | One-cell Kaggle/Colab-style scripts for external validation and memory-relief reruns | Traceability only |
 | `source/methodology_reports/` | Split appendix, business impact diagnostics, final defense/report utilities | Reporting support only |
 | `docs/ae_appendix/` | AE appendix experiment notes | Historical documentation |
 | `docs/behavioral_fusion/` | Behavioral and fusion experiment notes | Historical documentation |
