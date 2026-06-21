@@ -44,15 +44,16 @@ feature extractor and not as a universal replacement for classical oversampling.
 ## Read Order
 
 0. `docs/SKRIPSI_INTI.md` if the user needs the shortest human-facing anchor.
-1. `docs/THESIS_SCOPE.md`
-2. `docs/THESIS_RESULTS_BAB4.md`
-3. `docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md`
-4. `docs/EXPERIMENT_REGISTRY.md`
-5. `docs/EDA_AND_METHODOLOGY_AUDIT.md`
-6. `docs/STRATIFIED_SPLIT_RESET.md`
-7. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
-8. `src/README.md`
-9. `docs/literature/INDEX.md`
+1. `docs/WRITING_FOCUS_AE_LATENT_OVERSAMPLING.md`
+2. `docs/THESIS_SCOPE.md`
+3. `docs/THESIS_RESULTS_BAB4.md`
+4. `docs/AE_INTEGRATION_EXPERIMENT_RESULTS.md`
+5. `docs/EXPERIMENT_REGISTRY.md`
+6. `docs/EDA_AND_METHODOLOGY_AUDIT.md`
+7. `docs/STRATIFIED_SPLIT_RESET.md`
+8. `docs/PAPER_ANCHORED_PREPROCESSING_RESET.md`
+9. `src/README.md`
+10. `docs/literature/INDEX.md`
 
 PDFs under `../2. Reference/` are the source of truth for exact claims and
 quotes. Literature cards are summaries, not citation substitutes.
@@ -75,6 +76,10 @@ new scope decision is made or an artifact is missing.
 
 Use `outputs/stratified_reset/` for active artifacts. Keep
 `outputs/initial_proposal/` as historical chronological evidence.
+
+For a Kaggle-only rerun of the locked thesis method, use
+`kaggle/ieee_final_oversampling_kaggle.py`. Other Kaggle scripts are diagnostic
+or exploratory unless promoted in `docs/THESIS_SCOPE.md`.
 
 ## Active Preprocessing Contract
 

@@ -1,132 +1,130 @@
 # SKRIPSI_INTI - Halaman Jangkar
 
-Halaman ini adalah peta satu layar saat kamu mulai merasa penuh. Bacaan teknis
-tetap ada di dokumen lain, tapi untuk mengingat inti skripsi, mulai dari sini.
+Halaman satu layar saat mulai penuh. Kalau ragu, baca ini lalu kembali ke
+jalur utama.
 
-Source of truth tetap `THESIS_SCOPE.md`. Halaman ini hanya versi tenang dan
-ringkasnya.
+## 0. Aturan emas
 
-## 1. Pertanyaan Penelitian
-
-Pada representasi A1 dense yang sudah dipreprocessing secara paper-anchored,
-apakah autoencoder sebagai oversampler di latent space dapat meningkatkan
-Average Precision LightGBM dibanding:
-
-- LightGBM tanpa penyeimbangan; dan
-- LightGBM dengan SMOTE-NC.
-
-## 2. Protokol Aktif
+Ruang lingkup penulisan sekarang dikunci pada hasil yang paling defensible:
 
 ```text
-split_strategy = stratified_holdout
-train/validation/test = 60/20/20
-random_state = 42
-primary metric = Average Precision / PR-AUC
+Autoencoder sebagai latent-space oversampler + LightGBM + Bayesian Optimization
 ```
 
-Semua preprocessing, imputer, scaler, encoder, AE, dan oversampling hanya fit
-di train split. Validation dan test tidak dibalance.
+Tidak menambah metode besar baru. Eksperimen tambahan hanya boleh dipakai jika
+memperjelas narasi ini, bukan membuka cabang skripsi baru.
 
-## 3. Inti Metode
+## 1. Judul
+
+"Deteksi Penipuan Transaksi E-Commerce Menggunakan Integrasi Autoencoder dan
+LightGBM dengan Bayesian Optimization."
+
+Judul tetap aman karena integrasi Autoencoder tetap ada, tetapi perannya
+dijelaskan lebih presisi: bukan pengganti fitur mentah, melainkan pembentuk
+ruang laten untuk oversampling fraud.
+
+## 2. Inti metode
+
+Dataset IEEE-CIS diproses menjadi representasi A1 dense:
+
+- categorical frequency encoding;
+- numeric median imputation;
+- z-score scaling;
+- semua statistik fit hanya pada train.
+
+Pipeline utama:
 
 ```text
-[1] A1 preprocessing
-    categorical frequency encoding, numeric median + z-score
-
-        -> [2] AE latent-space oversampling
-              membuat sampel fraud sintetis hanya dari train split
-
-        -> [3] LightGBM
-
-        -> [4] Evaluasi test AP + paired bootstrap
+A1 preprocessing -> AE latent-space oversampling pada train fraud
+                 -> LightGBM
+                 -> Optuna/TPE tuning
+                 -> evaluasi PR-AUC + paired bootstrap
 ```
 
-Kalimat sidang:
+## 3. Tabel utama Bab 4
 
-> Metode utama saya memakai autoencoder bukan sebagai feature extractor, tetapi
-> sebagai pembuat sampel fraud sintetis di latent space. Pada representasi A1
-> yang dense, pendekatan ini meningkatkan AP LightGBM dibanding baseline dan
-> SMOTE-NC dengan dukungan paired bootstrap.
+Gunakan tiga pipeline tuned A1 sebagai tabel headline:
 
-## 4. Hasil Headline Aktif
+| Pipeline | Peran |
+|---|---|
+| A1 LightGBM baseline | baseline kuat tanpa oversampling |
+| A1 + SMOTE-NC + LightGBM | kontrol oversampling klasik |
+| A1 + AE latent-SMOTE + LightGBM | metode usulan |
 
-Final tuned A1 comparison:
+Angka headline:
 
-| Skenario | Test AP | Peran |
-|---|---:|---|
-| A1 LightGBM baseline | 0.838988 | baseline |
-| A1 + SMOTE-NC | 0.843476 | pembanding klasik |
-| A1 + AE latent-SMOTE | 0.850031 | metode usulan |
+| Pipeline tuned A1 | Test PR-AUC |
+|---|---:|
+| Baseline | 0.838988 |
+| SMOTE-NC | 0.843476 |
+| AE latent-SMOTE | 0.850031 |
 
 Delta utama:
 
-- AE vs baseline: +0.011043 AP.
-- AE vs SMOTE-NC: +0.006555 AP.
-- Keduanya didukung paired-bootstrap.
+| Perbandingan | Delta AP |
+|---|---:|
+| AE latent-SMOTE vs baseline | +0.011043 |
+| AE latent-SMOTE vs SMOTE-NC | +0.006555 |
+| SMOTE-NC vs baseline | +0.004488 |
 
-## 5. Yang Masuk Narasi Utama
+## 4. Klaim aman
 
-Masuk Bab 3/Bab 4:
+Klaim akhir:
 
-- A1 paper-anchored preprocessing.
-- LightGBM baseline.
-- SMOTE-NC sebagai pembanding oversampling.
-- AE latent-space oversampling sebagai metode usulan.
-- Average Precision / PR-AUC sebagai metrik utama.
-- Paired bootstrap untuk menguji delta AP.
+> Autoencoder berkontribusi pada deteksi fraud LightGBM sebagai latent-space
+> oversampler pada representasi fitur dense. Peningkatannya signifikan secara
+> statistik tetapi terbatas, sehingga kontribusinya bersifat kondisional, bukan
+> klaim bahwa AE selalu unggul sebagai feature extractor.
 
-Jadi pembatasnya sederhana:
+Kalimat penting untuk sidang:
 
-```text
-AE menang sebagai latent-space oversampler pada representasi A1 dense.
-AE tidak diklaim menang sebagai feature extractor universal.
+> Margin AE memang kecil setelah baseline dituning kuat. Itu justru menunjukkan
+> evaluasi dilakukan terhadap pembanding yang kompetitif. Kontribusi penelitian
+> adalah isolasi kondisi ketika AE masih memberi nilai tambah, yaitu pada
+> oversampling di ruang laten dense, bukan pada kompresi fitur langsung.
+
+## 5. Kontrol yang masuk Bab 4
+
+Masukkan sebagai bukti pendukung, bukan headline:
+
+- AE sebagai feature extractor pada A0 turun atau seri.
+- Pada A0 raw/NaN-native, AE latent-SMOTE menang atas baseline tetapi seri
+  terhadap SMOTE-NC.
+- Pada A1 dense, AE latent-SMOTE mengalahkan SMOTE-NC pada split utama dan
+  robustness beberapa split.
+- Paired bootstrap dipakai untuk semua klaim delta AP.
+
+## 6. Skrip yang dipakai
+
+Canonical local:
+
+```bash
+python src/tune_a1_augmentation_optuna.py
 ```
 
-## 6. Bacaan Minimal
+Kaggle ringkas:
 
-Kalau hanya ingin menulis skripsi dan tidak ingin tenggelam:
+```text
+kaggle/ieee_final_oversampling_kaggle.py
+```
 
-1. `THESIS_SCOPE.md`
-2. `THESIS_RESULTS_BAB4.md`
-3. `EXPERIMENT_REGISTRY.md`
-4. `AE_INTEGRATION_EXPERIMENT_RESULTS.md`
+Output Kaggle:
 
-Dokumen reset seperti `STRATIFIED_SPLIT_RESET.md` dan
-`PAPER_ANCHORED_PREPROCESSING_RESET.md` adalah decision record. Baca kalau perlu
-menjelaskan alasan metodologi, bukan sebagai daftar eksperimen baru.
+```text
+/kaggle/working/final_oversampling_results.json
+```
 
-## 7. Skrip yang Perlu Dikenali
+## 7. Abaikan untuk penulisan utama
 
-Jangan rerun eksperimen mahal kecuali artifact hilang atau scope dibuka ulang.
+Jangan jadikan cabang ini sebagai metode utama:
 
-| Tujuan | Skrip |
-|---|---|
-| Final tuned A1 comparison | `src/tune_a1_augmentation_optuna.py` |
-| A1 AE vs SMOTE-NC confirmation | `src/run_strong_baseline_augmentation.py` |
-| Robustness beberapa split | `src/run_repeated_split_validation.py` |
-| A0 fair control, bukan headline final | `src/run_fair_augmentation_comparison.py` |
-| Figur Bab 4 | `src/generate_thesis_figures.py` |
+- original proposal V-latent replacement;
+- AE feature extractor/additive latent;
+- reconstruction-error-only AE;
+- broad AE feature ladder;
+- RankGauss/swap-noise diagnostic;
+- LSTM/VAE/entity-context experiments;
+- chronological historical P01-P04 sebagai tabel utama.
 
-## 8. Abaikan Saat Panik
-
-Ini bukan narasi utama skripsi:
-
-- AE reconstruction-error features;
-- AE latent features yang ditempel ke LightGBM;
-- VAE prior control;
-- chronological split sebagai protokol utama;
-- hasil P01-P04, AE-05, dan score ensemble lama;
-- broad UID, velocity, rolling window, target encoding, dan ensemble besar.
-
-Semua itu boleh disebut sebagai diagnostik, appendix, limitation, atau future
-work jika perlu. Jangan jadikan alur utama.
-
-## 9. Checklist Anti-Overwhelm
-
-- [ ] Bab 3 menjelaskan A1 preprocessing, train-only AE oversampling, LightGBM,
-      dan evaluasi AP.
-- [ ] Bab 4 menampilkan tabel final A1 baseline vs SMOTE-NC vs AE.
-- [ ] Klaim AE dibatasi pada latent-space oversampling, bukan feature extractor.
-- [ ] Hasil chronological lama tidak dicampur dengan tabel stratified aktif.
-- [ ] Keterbatasan menyebut temporal evaluation/concept drift sebagai future
-      work.
+Cabang-cabang itu boleh disebut singkat sebagai ablation, diagnosis, limitation,
+atau future work jika diperlukan.

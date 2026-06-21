@@ -5,7 +5,7 @@ const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentT
 
 const ROOT = path.resolve(__dirname, "..");
 const FIG = path.join(ROOT, "outputs", "figures");
-const OUT = path.join(ROOT, "docs", "KAJIAN_PENYEBAB_AE.docx");
+const OUT = path.join(ROOT, "docs", "KAJIAN_PENYEBAB_AE_v2.docx");
 
 const border = { style: BorderStyle.SINGLE, size: 1, color: "AAB2BD" };
 const borders = { top: border, bottom: border, left: border, right: border };

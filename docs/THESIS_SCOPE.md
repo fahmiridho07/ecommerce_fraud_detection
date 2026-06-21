@@ -118,6 +118,8 @@ created:
 - GBDT backend shootouts with XGBoost/CatBoost.
 - Stacking many model families or leaderboard-style broad ensembles.
 - Rewriting the thesis into a general feature-engineering benchmark.
+- RankGauss/swap-noise AE variants as a new mainline method; they remain
+  diagnostic/future-work unless promoted by a new written scope decision.
 
 ## Source-Of-Truth Order
 

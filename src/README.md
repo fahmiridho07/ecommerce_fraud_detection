@@ -55,6 +55,7 @@ but they should be interpreted as diagnostics unless promoted by
 - `run_ae_feature_improvement_ladder.py` - proposal-near AE feature-improvement ladder.
 - `run_ae_diagnosis_fix_ladder.py` - missingness-aware, masked-loss, selective, error, and latent-activation fixes.
 - `run_broad_ae_feature_ladder.py` - broader AE feature-learning checks across feature families.
+- `run_rankgauss_swapnoise_ae_ladder.py` - optional RankGauss/swap-noise AE diagnostic; not part of the locked Bab 4 headline.
 - `run_ding_anchor_replication.py` - Ding-style ULB credit-card anchor replication.
 - `run_ding_ieeecis_strict.py` - strict Ding-style transfer check on IEEE-CIS.
 - `diagnose_initial_design_replace_v.py` - V-replacement diagnosis and latent-dimension sweep.
