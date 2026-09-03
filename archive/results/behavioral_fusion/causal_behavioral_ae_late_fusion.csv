@@ -1,2 +1,0 @@
-model_id,model_name,behavioral_weight,ae_weight,validation_average_precision,test_average_precision,validation_delta_vs_cba01r,validation_delta_vs_p04,validation_delta_vs_p02,test_delta_vs_cba01r,test_delta_vs_p04,test_delta_vs_p02,practical_result_category,selected_threshold,spearman_correlation,complementarity_classification
-LF01,Causal Behavioral + AE-LightGBM Late Fusion,0.50,0.50,0.629600,0.505543,0.014478,0.018969,0.005528,0.011705,0.014857,0.004105,strong success,0.37,0.744781,moderate
